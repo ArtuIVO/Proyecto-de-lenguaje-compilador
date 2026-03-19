@@ -70,7 +70,12 @@ class Lexer:
             if char.isdigit():
                 token = self.numero_o_error(linea)
                 if token.tipo == "ERROR LEXICO":
-                    errores.append(f"Línea {linea}: '{token.valor}' inválido")
+                    errores.append({
+                        "linea": linea,
+                        "error": "Número inválido",
+                        "detalle": token.valor,
+                        "solucion": "Corrige el número o elimina el carácter no válido"
+                    })
                 self.tokens.append(token)
                 continue
 
@@ -94,7 +99,12 @@ class Lexer:
                 continue
 
             # error léxico
-            errores.append(f"Línea {linea}: carácter no reconocido '{char}'")
+            errores.append({
+                    "linea": linea,
+                    "error": "Carácter no reconocido",
+                    "detalle": char,
+                    "solucion": "Elimina el carácter o usa uno válido"
+                })
             self.tokens.append(Token("ERROR LEXICO", char, linea))
             self.pos += 1
 

@@ -32,11 +32,11 @@ class MainWindow(QMainWindow):
     def _setup_menubar(self):
         menubar = self.menuBar()
 
-        archivo = menubar.addMenu("&Archivo")
-        archivo.addAction(self.action_limpiar)
+        archivo = menubar.addMenu("&Archivo") # type: ignore
+        archivo.addAction(self.action_limpiar) # type: ignore
 
-        analizadores = menubar.addMenu("&Analizadores")
-        analizadores.addAction(self.action_analizar)
+        analizadores = menubar.addMenu("&Analizadores") # type: ignore
+        analizadores.addAction(self.action_analizar) # type: ignore
 
     def _setup_toolbar(self):
         toolbar = QToolBar("Principal")
@@ -61,4 +61,4 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(splitter)
 
     def _setup_statusbar(self):
-        self.statusBar().showMessage("Listo.")
+        self.statusBar().showMessage("Listo.") # type: ignore

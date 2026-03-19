@@ -63,10 +63,21 @@ class ResultsPanel(QWidget):
         """
         pass
 
-    def load_errors(self, errors: list[str]):
+    def load_errors(self, errors):
         self.error_list.clear()
-        for error in errors:
-            self.error_list.addItem(error)
+
+        for err in errors:
+            if isinstance(err, dict):
+                texto = (
+                    f"Línea {err['linea']} → {err['error']}\n"
+                    f"Detalle: {err['detalle']}\n"
+                    f"Solución: {err['solucion']}"
+                )
+            else:
+                texto = err  # por si aún vienen errores como string
+
+            self.error_list.addItem(texto)
+
         if errors:
             self.tabs.setCurrentIndex(2)
 
