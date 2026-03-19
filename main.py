@@ -1,5 +1,5 @@
 import sys
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication 
 from views.main_window import MainWindow
 from controllers.lexico_controller import LexicoController
 

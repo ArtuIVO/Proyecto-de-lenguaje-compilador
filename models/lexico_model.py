@@ -1,20 +1,31 @@
 class Token:
-    def __init__(self, tipo, valor):
+    def __init__(self, tipo, valor, linea=1):
         self.tipo = tipo
         self.valor = valor
-        self.linea = 1
+        self.linea = linea
+
 
 class Lexer:
+
     PALABRAS_RESERVADAS = {
         "si": "PALABRA_RESERVADA",
         "cuando": "PALABRA_RESERVADA",
         "ejecutar": "PALABRA_RESERVADA"
     }
+
     OPERADORES = {
         "y": "OPERADOR",
         "o": "OPERADOR",
-        "no": "OPERADOR"
+        "no": "OPERADOR",
+        "=": "OPERADOR",
+        "<": "OPERADOR",
+        ">": "OPERADOR",
+        "==": "OPERADOR",
+        "!=": "OPERADOR",
+        "<=": "OPERADOR",
+        ">=": "OPERADOR"
     }
+
     SIMBOLOS = {
         "(": "SIMBOLO",
         ")": "SIMBOLO",
@@ -28,75 +39,104 @@ class Lexer:
         self.tokens = []
 
     def analizar(self):
+        tokens, _ = self.analizar_con_errores()
+        return tokens
+
+    def analizar_con_errores(self):
+        errores = []
+        linea = 1
+
         while self.pos < len(self.texto):
             char = self.texto[self.pos]
+
+            # salto de línea
+            if char == "\n":
+                linea += 1
+                self.pos += 1
+                continue
+
+            # espacios
             if char.isspace():
                 self.pos += 1
-            elif char.isalpha():
-                self.tokens.append(self.identificador())
-            elif char.isdigit():
-                self.tokens.append(self.numero())
-            elif char in self.SIMBOLOS:
-                self.tokens.append(Token(self.SIMBOLOS[char], char))
-                self.pos += 1
-            else:
-                print(f"{char} -> ERROR LEXICO")
-                self.pos += 1
-        return self.tokens
+                continue
 
-    def identificador(self):
-        inicio = self.pos
-        while self.pos < len(self.texto) and self.texto[self.pos].isalnum():
+            # identificadores o palabras reservadas
+            if char.isalpha():
+                token = self.identificador(linea)
+                self.tokens.append(token)
+                continue
+
+            # números o error tipo 3jugador
+            if char.isdigit():
+                token = self.numero_o_error(linea)
+                if token.tipo == "ERROR LEXICO":
+                    errores.append(f"Línea {linea}: '{token.valor}' inválido")
+                self.tokens.append(token)
+                continue
+
+            # operadores compuestos 
+            if self.peek(2) in self.OPERADORES:
+                op = self.peek(2)
+                self.tokens.append(Token("OPERADOR", op, linea))
+                self.pos += 2
+                continue
+
+            # operadores simples
+            if char in self.OPERADORES:
+                self.tokens.append(Token("OPERADOR", char, linea))
+                self.pos += 1
+                continue
+
+            # símbolos
+            if char in self.SIMBOLOS:
+                self.tokens.append(Token("SIMBOLO", char, linea))
+                self.pos += 1
+                continue
+
+            # error léxico
+            errores.append(f"Línea {linea}: carácter no reconocido '{char}'")
+            self.tokens.append(Token("ERROR LEXICO", char, linea))
             self.pos += 1
-        palabra = self.texto[inicio:self.pos]
-        if palabra in self.PALABRAS_RESERVADAS:
-            return Token("PALABRA_RESERVADA", palabra)
-        elif palabra in self.OPERADORES:
-            return Token("OPERADOR", palabra)
-        return Token("IDENTIFICADOR", palabra)
-
-    def numero(self):
-        inicio = self.pos
-        while self.pos < len(self.texto) and self.texto[self.pos].isdigit():
-            self.pos += 1
-        return Token("NUMERO", self.texto[inicio:self.pos])
-
-class _LexerCapturador(Lexer):
-    def analizar_con_errores(self) -> tuple[list[Token], list[str]]:
-        errores = []
-        linea_actual = 1
-
-        while self.pos < len(self.texto):
-            char = self.texto[self.pos]
-
-            if char == "\n":
-                linea_actual += 1
-                self.pos += 1
-            elif char.isspace():
-                self.pos += 1
-            elif char.isalpha():
-                t = self.identificador()
-                t.linea = linea_actual
-                self.tokens.append(t)
-            elif char.isdigit():
-                t = self.numero()
-                t.linea = linea_actual
-                self.tokens.append(t)
-            elif char in self.SIMBOLOS:
-                t = Token(self.SIMBOLOS[char], char)
-                t.linea = linea_actual
-                self.tokens.append(t)
-                self.pos += 1
-            else:
-                errores.append(
-                    f"Línea {linea_actual}: carácter no reconocido '{char}'"
-                )
-                self.pos += 1
 
         return self.tokens, errores
 
+    def identificador(self, linea):
+        inicio = self.pos
+
+        while self.pos < len(self.texto) and self.texto[self.pos].isalnum():
+            self.pos += 1
+
+        palabra = self.texto[inicio:self.pos]
+
+        if palabra in self.PALABRAS_RESERVADAS:
+            return Token("PALABRA_RESERVADA", palabra, linea)
+
+        if palabra in self.OPERADORES:
+            return Token("OPERADOR", palabra, linea)
+
+        return Token("IDENTIFICADOR", palabra, linea)
+
+    def numero_o_error(self, linea):
+        inicio = self.pos
+
+        while self.pos < len(self.texto) and self.texto[self.pos].isdigit():
+            self.pos += 1
+
+        
+        if self.pos < len(self.texto) and self.texto[self.pos].isalpha():
+            while self.pos < len(self.texto) and self.texto[self.pos].isalnum():
+                self.pos += 1
+
+            valor = self.texto[inicio:self.pos]
+            return Token("ERROR LEXICO", valor, linea)
+
+        return Token("NUMERO", self.texto[inicio:self.pos], linea)
+
+    def peek(self, n):
+        return self.texto[self.pos:self.pos + n]
+
 
 class LexicoModel:
-    def analizar(self, codigo: str) -> tuple[list[Token], list[str]]:
-        lexer = _LexerCapturador(codigo)
+    def analizar(self, codigo: str):
+        lexer = Lexer(codigo)
         return lexer.analizar_con_errores()

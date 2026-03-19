@@ -19,7 +19,7 @@ class ResultsPanel(QWidget):
         # Tab 1: Tokens
         self.token_table = QTableWidget(0, 3)
         self.token_table.setHorizontalHeaderLabels(["Lexema", "Token", "Línea"])
-        self.token_table.horizontalHeader().setStretchLastSection(True)
+        self.token_table.horizontalHeader().setStretchLastSection(True) # type: ignore
         self.token_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.token_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tabs.addTab(self.token_table, "Tokens")
