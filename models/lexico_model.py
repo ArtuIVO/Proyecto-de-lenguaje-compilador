@@ -113,10 +113,21 @@ class Lexer:
     def identificador(self, linea):
         inicio = self.pos
 
-        while self.pos < len(self.texto) and self.texto[self.pos].isalnum():
+        # solo letras
+        while self.pos < len(self.texto) and self.texto[self.pos].isalpha():
             self.pos += 1
 
         palabra = self.texto[inicio:self.pos]
+
+        # 🚨 ERROR: letras + números (ej: ejecutar3)
+        if self.pos < len(self.texto) and self.texto[self.pos].isdigit():
+            inicio_error = inicio
+
+            while self.pos < len(self.texto) and self.texto[self.pos].isalnum():
+                self.pos += 1
+
+            valor = self.texto[inicio_error:self.pos]
+            return Token("ERROR LEXICO", valor, linea)
 
         if palabra in self.PALABRAS_RESERVADAS:
             return Token("PALABRA_RESERVADA", palabra, linea)
