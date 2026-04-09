@@ -13,7 +13,7 @@ class MainWindow(QMainWindow):
     def _setup_ui(self):
         self._setup_window()
         self._setup_actions()
-        self._setup_menubar()
+        # self._setup_menubar()
         self._setup_toolbar()
         self._setup_central()
         self._setup_statusbar()
@@ -25,6 +25,9 @@ class MainWindow(QMainWindow):
     def _setup_actions(self):
         self.action_analizar = QAction("Analizar", self)
         self.action_analizar.setShortcut("F1")
+
+        self.load_file = QAction("Cargar Archivo", self)
+        self.load_file.setShortcut("Ctrl+O")
 
         self.action_limpiar = QAction("Limpiar", self)
         self.action_limpiar.setShortcut("Ctrl+L")
@@ -43,6 +46,8 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(False)
         self.addToolBar(toolbar)
         toolbar.addAction(self.action_analizar)
+        toolbar.addSeparator()
+        toolbar.addAction(self.load_file)
         toolbar.addSeparator()
         toolbar.addAction(self.action_limpiar)
 
