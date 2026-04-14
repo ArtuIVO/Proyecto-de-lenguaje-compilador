@@ -119,7 +119,7 @@ class Lexer:
 
         palabra = self.texto[inicio:self.pos]
 
-        # 🚨 ERROR: letras + números (ej: ejecutar3)
+        #ERROR: letras + números (ej: ejecutar3)
         if self.pos < len(self.texto) and self.texto[self.pos].isdigit():
             inicio_error = inicio
 
