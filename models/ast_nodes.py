@@ -34,3 +34,7 @@ class Numero(Nodo):
 class Identificador(Nodo):
     def __init__(self, nombre):
         self.nombre = nombre
+    
+class Escribir(Nodo):
+    def __init__(self, valor):
+        self.valor = valor

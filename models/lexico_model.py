@@ -10,7 +10,8 @@ class Lexer:
     PALABRAS_RESERVADAS = {
         "si": "PALABRA_RESERVADA",
         "cuando": "PALABRA_RESERVADA",
-        "ejecutar": "PALABRA_RESERVADA"
+        "ejecutar": "PALABRA_RESERVADA",
+        "escribir": "PALABRA_RESERVADA"
     }
 
     OPERADORES = {

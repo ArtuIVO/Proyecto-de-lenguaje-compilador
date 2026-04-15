@@ -30,14 +30,17 @@ class Parser:
     def sentencia(self):
         tok = self.actual()
 
-        if tok.valor == "si": #type: ignore
+        if tok.valor == "si": # type: ignore
             return self.if_stmt()
 
-        if tok.tipo == "IDENTIFICADOR": #type: ignore
+        if tok.valor == "escribir":# type: ignore
+            return self.escribir()
+
+        if tok.tipo == "IDENTIFICADOR":# type: ignore
             return self.asignacion()
 
-        raise Exception(f"Error sintáctico en línea {tok.linea}") # type: ignore
-
+        raise Exception(f"Sentencia inválida en línea {tok.linea}")# type: ignore
+    
     def if_stmt(self):
         self.match("PALABRA_RESERVADA", "si")
         condicion = self.expresion()
@@ -75,3 +78,10 @@ class Parser:
             return Identificador(tok.valor) #type: ignore
 
         raise Exception(f"Error en expresión línea {tok.linea}") #type: ignore
+    
+    def escribir(self):
+        self.match("PALABRA_RESERVADA", "escribir")
+        self.match("SIMBOLO", "(")
+        valor = self.expresion()
+        self.match("SIMBOLO", ")")
+        return Escribir(valor)

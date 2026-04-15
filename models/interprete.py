@@ -4,4 +4,4 @@ class Interprete:
     def ejecutar(self, ast):
         sem = AnalizadorSemantico()
         sem.analizar(ast)
-        return sem.variables
+        return sem.salida 

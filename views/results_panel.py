@@ -12,8 +12,11 @@ class ResultsPanel(QWidget):
     def show_result(self, data):
         self.result_list.clear()
 
-        for k, v in data.items():
-            self.result_list.addItem(f"{k} = {v}")
+        if not data:
+            self.result_list.addItem("Sin salida")
+
+        for v in data:
+            self.result_list.addItem(f"→ {v}")
 
         self.tabs.setCurrentIndex(2)
 
@@ -25,16 +28,20 @@ class ResultsPanel(QWidget):
 
         nombre = type(nodo).__name__
 
-        # mostrar info útil
-        extra = ""
+        # EXTRAER VALORES REALES
         if hasattr(nodo, "nombre"):
-            extra = f" ({nodo.nombre})"
-        if hasattr(nodo, "valor"):
-            extra = f" ({nodo.valor})"
+            texto = f"{nombre}: {nodo.nombre}"
+        elif hasattr(nodo, "valor"):
+            texto = f"{nombre}: {nodo.valor}"
+        elif hasattr(nodo, "op"):
+            texto = f"{nombre}: {nodo.op}"
+        else:
+            texto = nombre
 
-        self.ast_view.addItem(f"{indent}{nombre}{extra}")
+        self.ast_view.addItem(f"{indent}{texto}")
 
-        for attr in vars(nodo).values():
+        # recorrer hijos correctamente
+        for key, attr in vars(nodo).items():
             if isinstance(attr, list):
                 for item in attr:
                     if hasattr(item, "__dict__"):

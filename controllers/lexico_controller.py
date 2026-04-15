@@ -35,7 +35,7 @@ class LexicoController:
         if self.lexer.pos >= len(self.lexer.texto):
             self.timer.stop()
 
-            # VALIDAR ERRORES LÉXICOS ANTES
+            # VALIDAR ERRORES LÉXICOS
             errores_lexicos = [t for t in self.tokens if t.tipo == "ERROR LEXICO"]
 
             if errores_lexicos:
@@ -44,40 +44,36 @@ class LexicoController:
                     "linea": err.linea,
                     "error": "Error léxico",
                     "detalle": err.valor,
-                    "solucion": "Corrige el token inválido antes de continuar"
+                    "solucion": "Corrige el token inválido"
                 })
-                self.window.statusBar().showMessage("Error léxico encontrado")
                 return
 
-            # COMPILACIÓN COMPLETA
+            # 🔥 COMPILACIÓN
             try:
-                from models.sintactico_model import Parser
-                from models.interprete import Interprete
-
                 parser = Parser(self.tokens)
                 ast = parser.parse()
 
-                #  AST
                 self.window.results_panel.show_ast(ast)
 
-                #  SEMÁNTICO + EJECUCIÓN
                 interprete = Interprete()
                 resultado = interprete.ejecutar(ast)
 
                 self.window.results_panel.show_result(resultado)
 
-                self.window.statusBar().showMessage("Compilación completa")
+                self.window.statusBar().showMessage("Compilación completa ✅")
 
             except Exception as e:
                 self.window.results_panel.show_error({
                     "linea": 0,
-                    "error": "Error sintáctico o semántico",
+                    "error": "Error sintáctico/semántico",
                     "detalle": str(e),
-                    "solucion": "Verifica estructura (si, :, =) y variables definidas"
+                    "solucion": "Revisa la estructura del código"
                 })
-                self.window.statusBar().showMessage("Error en compilación")
 
             return
+
+        # ===== ANÁLISIS NORMAL =====
+
         char = self.lexer.texto[self.lexer.pos]
         linea = self.lexer.texto[:self.lexer.pos].count("\n") + 1
 
@@ -87,7 +83,6 @@ class LexicoController:
             self.lexer.pos += 1
             return
 
-        # IDENTIFICADORES
         if char.isalpha():
             token = self.lexer.identificador(linea)
             self.tokens.append(token)
@@ -98,14 +93,13 @@ class LexicoController:
                     "linea": linea,
                     "error": "Identificador inválido",
                     "detalle": token.valor,
-                    "solucion": "Usa solo letras sin números"
+                    "solucion": "Solo letras permitidas"
                 })
                 return
 
             self.window.results_panel.add_token(token)
             return
 
-        # NÚMEROS
         if char.isdigit():
             token = self.lexer.numero_o_error(linea)
             self.tokens.append(token)
@@ -123,41 +117,34 @@ class LexicoController:
             self.window.results_panel.add_token(token)
             return
 
-        # OPERADORES COMPUESTOS
         op2 = self.lexer.peek(2)
         if op2 in self.lexer.OPERADORES:
-            from models.lexico_model import Token
             token = Token("OPERADOR", op2, linea)
             self.tokens.append(token)
             self.window.results_panel.add_token(token)
             self.lexer.pos += 2
             return
 
-        # OPERADORES SIMPLES
         if char in self.lexer.OPERADORES:
-            from models.lexico_model import Token
             token = Token("OPERADOR", char, linea)
             self.tokens.append(token)
             self.window.results_panel.add_token(token)
             self.lexer.pos += 1
             return
 
-        # SÍMBOLOS
         if char in self.lexer.SIMBOLOS:
-            from models.lexico_model import Token
             token = Token("SIMBOLO", char, linea)
             self.tokens.append(token)
             self.window.results_panel.add_token(token)
             self.lexer.pos += 1
             return
 
-        # ERROR DESCONOCIDO
         self.timer.stop()
         self.window.results_panel.show_error({
             "linea": linea,
             "error": "Carácter no reconocido",
             "detalle": char,
-            "solucion": "Elimina o reemplaza el carácter"
+            "solucion": "Elimina ese carácter"
         })
 
     def limpiar(self):
