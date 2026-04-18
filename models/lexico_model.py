@@ -5,135 +5,134 @@ class Token:
         self.linea = linea
 
 
+class Token:
+    def __init__(self, tipo, valor, linea):
+        self.tipo = tipo
+        self.valor = valor
+        self.linea = linea
+
+
 class Lexer:
 
-    PALABRAS_RESERVADAS = {
-        "si": "PALABRA_RESERVADA",
-        "cuando": "PALABRA_RESERVADA",
-        "ejecutar": "PALABRA_RESERVADA",
-        "escribir": "PALABRA_RESERVADA"
-    }
+    PALABRAS = {"si", "escribir", "cuando", "ejecutar"}
 
     OPERADORES = {
-        "y": "OPERADOR",
-        "o": "OPERADOR",
-        "no": "OPERADOR",
-        "=": "OPERADOR",
-        "<": "OPERADOR",
-        ">": "OPERADOR",
-        "==": "OPERADOR",
-        "!=": "OPERADOR",
-        "<=": "OPERADOR",
-        ">=": "OPERADOR"
+        "==", "!=", "<=", ">=",
+        "=",
+        "<", ">"
     }
 
-    SIMBOLOS = {
-        "(": "SIMBOLO",
-        ")": "SIMBOLO",
-        ":": "SIMBOLO",
-        ",": "SIMBOLO"
-    }
+    SIMBOLOS = {"(", ")", ":"}
 
     def __init__(self, texto):
         self.texto = texto
         self.pos = 0
-        self.tokens = []
+        self.linea = 1
 
-    def analizar(self):
-        tokens, _ = self.analizar_con_errores()
-        return tokens
+    def actual(self):
+        if self.pos < len(self.texto):
+            return self.texto[self.pos]
+        return None
+
+    def avanzar(self):
+        self.pos += 1
 
     def analizar_con_errores(self):
+        tokens = []
         errores = []
-        linea = 1
 
         while self.pos < len(self.texto):
-            char = self.texto[self.pos]
 
-            # salto de línea
-            if char == "\n":
-                linea += 1
-                self.pos += 1
+            c = self.actual()
+
+            if c == "\n":
+                self.linea += 1
+                self.avanzar()
                 continue
 
-            # espacios
-            if char.isspace():
-                self.pos += 1
+            if c.isspace():
+                self.avanzar()
                 continue
 
-            # identificadores o palabras reservadas
-            if char.isalpha():
-                token = self.identificador(linea)
-                self.tokens.append(token)
+            # letras
+            if c.isalpha():
+                inicio = self.pos
+
+                while self.actual() and self.actual().isalnum():
+                    self.avanzar()
+
+                palabra = self.texto[inicio:self.pos]
+
+                if palabra in self.PALABRAS:
+                    tokens.append(Token("PALABRA_RESERVADA", palabra, self.linea))
+                else:
+                    tokens.append(Token("IDENTIFICADOR", palabra, self.linea))
+
                 continue
 
-            # números o error tipo 3jugador
-            if char.isdigit():
-                token = self.numero_o_error(linea)
-                if token.tipo == "ERROR LEXICO":
-                    errores.append({
-                        "linea": linea,
-                        "error": "Número inválido",
-                        "detalle": token.valor,
-                        "solucion": "Corrige el número o elimina el carácter no válido"
-                    })
-                self.tokens.append(token)
+            # numeros
+            if c.isdigit():
+                inicio = self.pos
+
+                while self.actual() and self.actual().isdigit():
+                    self.avanzar()
+
+                numero = self.texto[inicio:self.pos]
+                tokens.append(Token("NUMERO", numero, self.linea))
                 continue
 
-            # operadores compuestos 
-            if self.peek(2) in self.OPERADORES:
-                op = self.peek(2)
-                self.tokens.append(Token("OPERADOR", op, linea))
+            # operadores dobles
+            doble = self.texto[self.pos:self.pos+2]
+
+            if doble in self.OPERADORES:
+                tokens.append(Token("OPERADOR", doble, self.linea))
                 self.pos += 2
                 continue
 
             # operadores simples
-            if char in self.OPERADORES:
-                self.tokens.append(Token("OPERADOR", char, linea))
-                self.pos += 1
+            if c in self.OPERADORES:
+                tokens.append(Token("OPERADOR", c, self.linea))
+                self.avanzar()
                 continue
 
             # símbolos
-            if char in self.SIMBOLOS:
-                self.tokens.append(Token("SIMBOLO", char, linea))
-                self.pos += 1
+            if c in self.SIMBOLOS:
+                tokens.append(Token("SIMBOLO", c, self.linea))
+                self.avanzar()
                 continue
 
-            # error léxico
             errores.append({
-                    "linea": linea,
-                    "error": "Carácter no reconocido",
-                    "detalle": char,
-                    "solucion": "Elimina el carácter o usa uno válido"
-                })
-            self.tokens.append(Token("ERROR LEXICO", char, linea))
-            self.pos += 1
+                "linea": self.linea,
+                "error": "Carácter inválido",
+                "detalle": c,
+                "solucion": "Elimine ese carácter"
+            })
 
-        return self.tokens, errores
+            self.avanzar()
+
+        return tokens, errores
 
     def identificador(self, linea):
         inicio = self.pos
 
-        # solo letras
         while self.pos < len(self.texto) and self.texto[self.pos].isalpha():
             self.pos += 1
 
         palabra = self.texto[inicio:self.pos]
 
-        #ERROR: letras + números (ej: ejecutar3)
+        # error tipo ejecutar3
         if self.pos < len(self.texto) and self.texto[self.pos].isdigit():
-            inicio_error = inicio
 
             while self.pos < len(self.texto) and self.texto[self.pos].isalnum():
                 self.pos += 1
 
-            valor = self.texto[inicio_error:self.pos]
+            valor = self.texto[inicio:self.pos]
             return Token("ERROR LEXICO", valor, linea)
 
         if palabra in self.PALABRAS_RESERVADAS:
             return Token("PALABRA_RESERVADA", palabra, linea)
 
-        if palabra in self.OPERADORES:
+        if palabra in self.OPERADORES_PALABRA:
             return Token("OPERADOR", palabra, linea)
 
         return Token("IDENTIFICADOR", palabra, linea)

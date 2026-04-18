@@ -6,10 +6,6 @@ class AnalizadorSemantico:
     def analizar(self, nodo):
         metodo = f"visitar_{type(nodo).__name__}"
         return getattr(self, metodo)(nodo)
-    
-    def visitar_Escribir(self, nodo):
-        valor = self.analizar(nodo.valor)
-        self.salida.append(valor)
 
     def visitar_Programa(self, nodo):
         for s in nodo.sentencias:
@@ -27,6 +23,17 @@ class AnalizadorSemantico:
             raise Exception(f"Variable no definida: {nodo.nombre}")
         return self.variables[nodo.nombre]
 
+    def visitar_Escribir(self, nodo):
+        valor = self.analizar(nodo.valor)
+        self.salida.append(valor)
+
+    def visitar_If(self, nodo):
+        condicion = self.analizar(nodo.condicion)
+
+        if condicion:
+            for instruccion in nodo.cuerpo:
+                self.analizar(instruccion)
+
     def visitar_BinOp(self, nodo):
         izq = self.analizar(nodo.izquierda)
         der = self.analizar(nodo.derecha)
@@ -42,9 +49,15 @@ class AnalizadorSemantico:
 
         if nodo.op == "==":
             return izq == der
+        if nodo.op == "!=":
+            return izq != der
         if nodo.op == "<":
             return izq < der
         if nodo.op == ">":
             return izq > der
+        if nodo.op == "<=":
+            return izq <= der
+        if nodo.op == ">=":
+            return izq >= der
 
-        raise Exception(f"Operador no válido: {nodo.op}")
+        raise Exception(f"Operador no soportado: {nodo.op}")

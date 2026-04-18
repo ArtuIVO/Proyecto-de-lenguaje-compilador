@@ -24,7 +24,10 @@ class BinOp(Nodo):
         self.izquierda = izquierda
         self.op = op
         self.derecha = derecha
-
+        
+class Variable:
+    def __init__(self, nombre):
+        self.nombre = nombre
 
 class Numero(Nodo):
     def __init__(self, valor):
