@@ -4,14 +4,13 @@ from models.lexico_model import Lexer
 from models.sintactico_model import Parser
 from models.semantico_model import AnalizadorSemantico
 
-print("CONTROLADOR NUEVO")
 class LexicoController:
 
     def __init__(self, window):
         self.window = window
         self._connect_signals()
 
-    def _connect_signals(self):
+    def _connect_signals(self): 
         self.window.action_analizar.triggered.connect(self.analizar)
         self.window.action_limpiar.triggered.connect(self.limpiar)
         self.window.action_abrir.triggered.connect(self.abrir_archivo)
@@ -23,7 +22,6 @@ class LexicoController:
             "",
             "Archivos (*.txt)"
         )
-
         if file_path:
             with open(file_path, "r", encoding="utf-8") as f:
                 self.window.editor_panel.editor.setPlainText(f.read())
@@ -52,6 +50,7 @@ class LexicoController:
             # PARSER
             parser = Parser(tokens)
             ast = parser.parse()
+            self.window.results_panel.load_ast(ast)
 
             # SEMANTICO
             sem = AnalizadorSemantico()

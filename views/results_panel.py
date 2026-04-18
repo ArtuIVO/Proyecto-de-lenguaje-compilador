@@ -1,75 +1,40 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QTabWidget,
-    QTableWidget, QTableWidgetItem, QListWidget
+    QTableWidget, QTableWidgetItem,
+    QListWidget, QTreeWidget, QTreeWidgetItem
 )
 
 
 class ResultsPanel(QWidget):
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._setup_ui()
-
-    def show_result(self, data):
-        self.result_list.clear()
-
-        if not data:
-            self.result_list.addItem("Sin salida")
-
-        for v in data:
-            self.result_list.addItem(f"→ {v}")
-
-        self.tabs.setCurrentIndex(2)
-
-    def show_ast(self, nodo, nivel=0):
-        if nivel == 0:
-            self.ast_view.clear()
-
-        indent = "│   " * nivel + "├── "
-
-        nombre = type(nodo).__name__
-
-        # EXTRAER VALORES REALES
-        if hasattr(nodo, "nombre"):
-            texto = f"{nombre}: {nodo.nombre}"
-        elif hasattr(nodo, "valor"):
-            texto = f"{nombre}: {nodo.valor}"
-        elif hasattr(nodo, "op"):
-            texto = f"{nombre}: {nodo.op}"
-        else:
-            texto = nombre
-
-        self.ast_view.addItem(f"{indent}{texto}")
-
-        # recorrer hijos correctamente
-        for key, attr in vars(nodo).items():
-            if isinstance(attr, list):
-                for item in attr:
-                    if hasattr(item, "__dict__"):
-                        self.show_ast(item, nivel + 1)
-            elif hasattr(attr, "__dict__"):
-                self.show_ast(attr, nivel + 1)
-
-        if nivel == 0:
-            self.tabs.setCurrentIndex(3)
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
 
         self.tabs = QTabWidget()
-        self.result_list = QListWidget()
-        self.tabs.addTab(self.result_list, "Resultados")
-        # TAB AST (ÁRBOL SINTÁCTICO)
-        self.ast_view = QListWidget()
-        self.tabs.addTab(self.ast_view, "AST")
 
-        # TAB TOKENS
+        # TOKENS
         self.token_table = QTableWidget(0, 3)
-        self.token_table.setHorizontalHeaderLabels(["Lexema", "Token", "Línea"])
-        self.tabs.addTab(self.token_table, " Tokens")
+        self.token_table.setHorizontalHeaderLabels(
+            ["Lexema", "Token", "Línea"]
+        )
+        self.tabs.addTab(self.token_table, "Tokens")
 
-        # TAB ERRORES
+        # ERRORES
         self.error_list = QListWidget()
-        self.tabs.addTab(self.error_list, " Errores")
+        self.tabs.addTab(self.error_list, "Errores")
+
+        # RESULTADOS
+        self.resultados_list = QListWidget()
+        self.tabs.addTab(self.resultados_list, "Resultados")
+
+        # AST
+        self.ast_tree = QTreeWidget()
+        self.ast_tree.setHeaderLabel("Árbol AST")
+        self.tabs.addTab(self.ast_tree, "AST")
 
         layout.addWidget(self.tabs)
 
@@ -81,8 +46,6 @@ class ResultsPanel(QWidget):
         self.token_table.setItem(row, 1, QTableWidgetItem(token.tipo))
         self.token_table.setItem(row, 2, QTableWidgetItem(str(token.linea)))
 
-        self.token_table.scrollToBottom()
-
     def show_error(self, err):
         self.error_list.clear()
 
@@ -90,18 +53,58 @@ class ResultsPanel(QWidget):
             f"Línea {err['linea']}\n"
             f"Error: {err['error']}\n"
             f"Detalle: {err['detalle']}\n"
-            f"Posible Solución: {err['solucion']}"
+            f"Solución: {err['solucion']}"
         )
 
         self.error_list.addItem(texto)
         self.tabs.setCurrentIndex(1)
 
+    def load_resultados(self, datos):
+        self.resultados_list.clear()
+
+        for x in datos:
+            self.resultados_list.addItem(str(x))
+
+        self.tabs.setCurrentIndex(2)
+
+    def load_ast(self, ast):
+        self.ast_tree.clear()
+
+        root = QTreeWidgetItem([type(ast).__name__])
+        self.ast_tree.addTopLevelItem(root)
+
+        self._agregar_nodos(root, ast)
+        self.ast_tree.expandAll()
+
+    def _agregar_nodos(self, padre, nodo):
+        if not hasattr(nodo, "__dict__"):
+            return
+
+        for k, v in nodo.__dict__.items():
+
+            if isinstance(v, list):
+                lista = QTreeWidgetItem([k])
+                padre.addChild(lista)
+
+                for item in v:
+                    hijo = QTreeWidgetItem([type(item).__name__])
+                    lista.addChild(hijo)
+                    self._agregar_nodos(hijo, item)
+
+            elif hasattr(v, "__dict__"):
+                hijo = QTreeWidgetItem([k])
+                padre.addChild(hijo)
+
+                sub = QTreeWidgetItem([type(v).__name__])
+                hijo.addChild(sub)
+
+                self._agregar_nodos(sub, v)
+
+            else:
+                padre.addChild(QTreeWidgetItem([f"{k}: {v}"]))
+
     def clear(self):
         self.token_table.setRowCount(0)
         self.error_list.clear()
-
-        if hasattr(self, "result_list"):
-            self.result_list.clear()
-
-        if hasattr(self, "ast_view"):
-            self.ast_view.clear()
+        self.resultados_list.clear()
+        self.ast_tree.clear()

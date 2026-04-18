@@ -11,6 +11,7 @@ def main():
         
     window = MainWindow()
     controller = LexicoController(window)
+
     window.show()
     
     sys.exit(app.exec())

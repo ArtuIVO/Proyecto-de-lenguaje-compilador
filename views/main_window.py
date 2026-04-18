@@ -1,48 +1,57 @@
-from PyQt6.QtWidgets import QMainWindow, QSplitter, QToolBar, QFileDialog
+from PyQt6.QtWidgets import (
+    QMainWindow, QSplitter, QToolBar
+)
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
+
 from views.editor_panel import EditorPanel
 from views.results_panel import ResultsPanel
 
 
 class MainWindow(QMainWindow):
+
     def __init__(self):
         super().__init__()
         self._setup_ui()
 
     def _setup_ui(self):
-        self._setup_window()
-        self._setup_actions()
-        self._setup_toolbar()
-        self._setup_central()
-        self._setup_statusbar()
+        self.setWindowTitle("Compilador V1")
+        self.resize(1200, 700)
 
-    def _setup_window(self):
-        self.setWindowTitle("Compilador V2  —  Compilador Completo")
-        self.setMinimumSize(1100, 700)
+        self._crear_acciones()
+        self._crear_toolbar()
+        self._crear_central()
+        self.statusBar().showMessage("Listo")
 
-    def _setup_actions(self):
+    def _crear_acciones(self):
         self.action_analizar = QAction("Analizar", self)
         self.action_analizar.setShortcut("F1")
-
-        self.load_file = QAction("Cargar Archivo", self)
-        self.load_file.setShortcut("Ctrl+O")
 
         self.action_limpiar = QAction("Limpiar", self)
         self.action_limpiar.setShortcut("Ctrl+L")
 
-    def _setup_toolbar(self):
-        toolbar = QToolBar("Principal")
-        toolbar.setMovable(False)
-        self.addToolBar(toolbar)
+        self.action_abrir = QAction("Abrir", self)
+        self.action_abrir.setShortcut("Ctrl+O")
 
-        toolbar.addAction(self.action_analizar)
-        toolbar.addSeparator()
-        toolbar.addAction(self.load_file)
-        toolbar.addSeparator()
-        toolbar.addAction(self.action_limpiar)
+    def _crear_menu(self):
+        menu = self.menuBar()
 
-    def _setup_central(self):
+        archivo = menu.addMenu("Archivo")
+        archivo.addAction(self.action_abrir)
+        archivo.addAction(self.action_limpiar)
+
+        compilar = menu.addMenu("Compilar")
+        compilar.addAction(self.action_analizar)
+
+    def _crear_toolbar(self):
+        bar = QToolBar()
+        self.addToolBar(bar)
+
+        bar.addAction(self.action_analizar)
+        bar.addAction(self.action_abrir)
+        bar.addAction(self.action_limpiar)
+
+    def _crear_central(self):
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
         self.editor_panel = EditorPanel()
@@ -50,10 +59,6 @@ class MainWindow(QMainWindow):
 
         splitter.addWidget(self.editor_panel)
         splitter.addWidget(self.results_panel)
-        splitter.setSizes([550, 550])
-        splitter.setChildrenCollapsible(True)
+        splitter.setSizes([600, 600])
 
         self.setCentralWidget(splitter)
-
-    def _setup_statusbar(self):
-        self.statusBar().showMessage("Listo.")  # type: ignore

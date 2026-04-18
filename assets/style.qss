@@ -14,7 +14,6 @@ QPlainTextEdit {
     border-radius: 8px;
     padding: 12px;
     selection-background-color: #004d33;
-    caret-color: #00ff9c;
 }
 
 /* efecto tipo terminal */
