@@ -21,7 +21,16 @@ class Lexer:
         "retornar",
         "para",
         "en",
-        "rango"
+        "rango",
+        "npc",
+        "hablar",
+        "mover",
+        "patrullar",
+        "atacar",
+        "vida",
+        "animar",
+        "esperar",
+        "ruta",
     }
 
     OPERADORES = {

@@ -77,22 +77,39 @@ class ResultsPanel(QWidget):
 
         self.ast_tree.expandAll()
         self.tabs.setCurrentIndex(3)
+    
     def _crear_item(self, nodo):
+
         nombre = type(nodo).__name__
 
         item = QTreeWidgetItem([nombre])
 
         colores = {
+            # base lenguaje
             "Programa": "#00ff9c",
             "Asignacion": "#58a6ff",
             "If": "#ffcc00",
+            "While": "#ff8800",
+            "Para": "#ffaa00",
             "BinOp": "#ff7b72",
             "Numero": "#79c0ff",
+            "Cadena": "#7ee787",
             "Identificador": "#c9d1d9",
-            "Escribir": "#d2a8ff"
+            "Escribir": "#d2a8ff",
+            "Funcion": "#a371f7",
+            "Llamada": "#56d364",
+            "Retornar": "#ffb86b",
+
+            # NPC
+            "NPC": "#ff4d6d",
+            "Hablar": "#00d4ff",
+            "Mover": "#00ffaa",
+            "Atacar": "#ff3333",
+            "Patrullar": "#ffaa33",
+            "Animar": "#bb88ff"
         }
 
-        color = colores.get(nombre, "#ffffff")
+        color = colores.get(nombre, "#FFFFFF")
 
         item.setForeground(0, QColor(color))
 

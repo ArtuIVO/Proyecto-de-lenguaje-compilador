@@ -1,8 +1,14 @@
+import ast
+
 from PyQt6.QtWidgets import QFileDialog
 
 from models.lexico_model import Lexer
 from models.sintactico_model import Parser
 from models.semantico_model import AnalizadorSemantico
+
+from models.semantico_model import AnalizadorSemantico
+from npc.npc_parser import NPCParser
+from npc.npc_semantic import NPCSemantic
 
 
 class LexicoController:
@@ -48,13 +54,19 @@ class LexicoController:
             for token in tokens:
                 self.window.results_panel.add_token(token)
 
-            # PARSER
-            parser = Parser(tokens)
-            ast = parser.parse()
-            self.window.results_panel.load_ast(ast)
+            # Selección inteligente de lenguaje
 
-            # SEMANTICO
-            sem = AnalizadorSemantico()
+            if "npc " in codigo:
+                parser = NPCParser(tokens)
+                sem = NPCSemantic()
+            else:
+                parser = Parser(tokens)
+                sem = AnalizadorSemantico()
+            # SINTÁCTICO
+            ast = parser.parse()
+            # MOSTRAR AST SIEMPRE
+            self.window.results_panel.load_ast(ast)
+            # SEMÁNTICO
             sem.analizar(ast)
 
             self.window.results_panel.load_resultados(

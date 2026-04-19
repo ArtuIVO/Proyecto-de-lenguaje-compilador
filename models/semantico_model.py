@@ -230,3 +230,4 @@ class AnalizadorSemantico:
     
     def visitar_Cadena(self, nodo):
         return nodo.valor
+    
