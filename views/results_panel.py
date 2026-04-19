@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QTableWidget, QTableWidgetItem,
     QListWidget, QTreeWidget, QTreeWidgetItem
 )
-
+from PyQt6.QtGui import QColor
 
 class ResultsPanel(QWidget):
 
@@ -70,11 +70,79 @@ class ResultsPanel(QWidget):
     def load_ast(self, ast):
         self.ast_tree.clear()
 
-        root = QTreeWidgetItem([type(ast).__name__])
+        root = self._crear_item(ast)
         self.ast_tree.addTopLevelItem(root)
 
-        self._agregar_nodos(root, ast)
+        self._cargar_hijos(root, ast)
+
         self.ast_tree.expandAll()
+        self.tabs.setCurrentIndex(3)
+    def _crear_item(self, nodo):
+        nombre = type(nodo).__name__
+
+        item = QTreeWidgetItem([nombre])
+
+        colores = {
+            "Programa": "#00ff9c",
+            "Asignacion": "#58a6ff",
+            "If": "#ffcc00",
+            "BinOp": "#ff7b72",
+            "Numero": "#79c0ff",
+            "Identificador": "#c9d1d9",
+            "Escribir": "#d2a8ff"
+        }
+
+        color = colores.get(nombre, "#ffffff")
+
+        item.setForeground(0, QColor(color))
+
+        return item
+
+
+    def _cargar_hijos(self, padre, nodo):
+
+        if not hasattr(nodo, "__dict__"):
+            return
+
+        for clave, valor in nodo.__dict__.items():
+
+            # LISTAS
+            if isinstance(valor, list):
+
+                rama = QTreeWidgetItem([clave])
+                padre.addChild(rama)
+
+                for elem in valor:
+
+                    # si es nodo
+                    if hasattr(elem, "__dict__"):
+                        hijo = self._crear_item(elem)
+                        rama.addChild(hijo)
+                        self._cargar_hijos(hijo, elem)
+
+                    # si es texto / número
+                    else:
+                        rama.addChild(
+                            QTreeWidgetItem([str(elem)])
+                        )
+
+            # NODO INTERNO
+            elif hasattr(valor, "__dict__"):
+
+                rama = QTreeWidgetItem([clave])
+                padre.addChild(rama)
+
+                hijo = self._crear_item(valor)
+                rama.addChild(hijo)
+
+                self._cargar_hijos(hijo, valor)
+
+            # DATO SIMPLE
+            else:
+                hoja = QTreeWidgetItem(
+                    [f"{clave}: {valor}"]
+                )
+                padre.addChild(hoja)
 
     def _agregar_nodos(self, padre, nodo):
         if not hasattr(nodo, "__dict__"):

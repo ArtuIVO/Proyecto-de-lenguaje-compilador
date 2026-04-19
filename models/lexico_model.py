@@ -4,30 +4,49 @@ class Token:
         self.valor = valor
         self.linea = linea
 
-
-class Token:
-    def __init__(self, tipo, valor, linea):
-        self.tipo = tipo
-        self.valor = valor
-        self.linea = linea
+    def __repr__(self):
+        return f"{self.tipo}({self.valor})"
 
 
 class Lexer:
 
-    PALABRAS = {"si", "escribir", "cuando", "ejecutar"}
+    PALABRAS = {
+        "si",
+        "sino",
+        "mientras",
+        "escribir",
+        "cuando",
+        "ejecutar",
+        "funcion",
+        "retornar",
+        "para",
+        "en",
+        "rango"
+    }
 
     OPERADORES = {
         "==", "!=", "<=", ">=",
         "=",
-        "<", ">"
+        "<", ">",
+        "+", "-", "*", "/"
     }
 
-    SIMBOLOS = {"(", ")", ":"}
+    SIMBOLOS = {
+        "(", ")",
+        "[", "]",
+        ":",
+        ","
+    }
 
     def __init__(self, texto):
-        self.texto = texto
+        self.texto = texto.replace("\t", "    ")
         self.pos = 0
         self.linea = 1
+
+        self.indent_stack = [0]
+        self.inicio_linea = True
+
+    # ---------------------
 
     def actual(self):
         if self.pos < len(self.texto):
@@ -37,25 +56,70 @@ class Lexer:
     def avanzar(self):
         self.pos += 1
 
+    def mirar(self, n=1):
+        return self.texto[self.pos:self.pos+n]
+
+    # ---------------------
+
     def analizar_con_errores(self):
+
         tokens = []
         errores = []
 
         while self.pos < len(self.texto):
 
+            # ---------------- INDENTACIÓN ----------------
+            if self.inicio_linea:
+
+                espacios = 0
+
+                while self.actual() == " ":
+                    espacios += 1
+                    self.avanzar()
+
+                # línea vacía
+                if self.actual() == "\n":
+                    tokens.append(Token("NEWLINE", "\\n", self.linea))
+                    self.linea += 1
+                    self.avanzar()
+                    continue
+
+                self.inicio_linea = False
+
+                actual_indent = self.indent_stack[-1]
+
+                if espacios > actual_indent:
+                    self.indent_stack.append(espacios)
+                    tokens.append(Token("INDENT", "INDENT", self.linea))
+
+                elif espacios < actual_indent:
+                    while self.indent_stack[-1] > espacios:
+                        self.indent_stack.pop()
+                        tokens.append(Token("DEDENT", "DEDENT", self.linea))
+
+            # --------------------------------------------
+
             c = self.actual()
 
+            if c is None:
+                break
+
+            # salto línea
             if c == "\n":
+                tokens.append(Token("NEWLINE", "\\n", self.linea))
                 self.linea += 1
                 self.avanzar()
+                self.inicio_linea = True
                 continue
 
+            # espacios internos
             if c.isspace():
                 self.avanzar()
                 continue
 
-            # letras
+            # ---------- IDENTIFICADOR ----------
             if c.isalpha():
+
                 inicio = self.pos
 
                 while self.actual() and self.actual().isalnum():
@@ -64,43 +128,82 @@ class Lexer:
                 palabra = self.texto[inicio:self.pos]
 
                 if palabra in self.PALABRAS:
-                    tokens.append(Token("PALABRA_RESERVADA", palabra, self.linea))
+                    tokens.append(
+                        Token("PALABRA_RESERVADA", palabra, self.linea)
+                    )
                 else:
-                    tokens.append(Token("IDENTIFICADOR", palabra, self.linea))
+                    tokens.append(
+                        Token("IDENTIFICADOR", palabra, self.linea)
+                    )
 
                 continue
 
-            # numeros
+            # strings
+            if c == '"':
+                self.avanzar()
+                inicio = self.pos
+
+                while self.actual() and self.actual() != '"':
+                    self.avanzar()
+
+                texto = self.texto[inicio:self.pos]
+
+                if self.actual() != '"':
+                    errores.append({
+                        "linea": self.linea,
+                        "error": "Cadena sin cerrar",
+                        "detalle": texto,
+                        "solucion": 'Cerrar con comillas "'
+                    })
+                else:
+                    self.avanzar()
+                    tokens.append(Token("STRING", texto, self.linea))
+
+                continue
+
+            # ---------- NÚMEROS ----------
             if c.isdigit():
+
                 inicio = self.pos
 
                 while self.actual() and self.actual().isdigit():
                     self.avanzar()
 
                 numero = self.texto[inicio:self.pos]
-                tokens.append(Token("NUMERO", numero, self.linea))
+
+                tokens.append(
+                    Token("NUMERO", numero, self.linea)
+                )
+
                 continue
 
-            # operadores dobles
-            doble = self.texto[self.pos:self.pos+2]
+            # ---------- OPERADOR DOBLE ----------
+            doble = self.mirar(2)
 
             if doble in self.OPERADORES:
-                tokens.append(Token("OPERADOR", doble, self.linea))
+                tokens.append(
+                    Token("OPERADOR", doble, self.linea)
+                )
                 self.pos += 2
                 continue
 
-            # operadores simples
+            # ---------- OPERADOR SIMPLE ----------
             if c in self.OPERADORES:
-                tokens.append(Token("OPERADOR", c, self.linea))
+                tokens.append(
+                    Token("OPERADOR", c, self.linea)
+                )
                 self.avanzar()
                 continue
 
-            # símbolos
+            # ---------- SÍMBOLOS ----------
             if c in self.SIMBOLOS:
-                tokens.append(Token("SIMBOLO", c, self.linea))
+                tokens.append(
+                    Token("SIMBOLO", c, self.linea)
+                )
                 self.avanzar()
                 continue
 
+            # ---------- ERROR ----------
             errores.append({
                 "linea": self.linea,
                 "error": "Carácter inválido",
@@ -110,54 +213,15 @@ class Lexer:
 
             self.avanzar()
 
+        # cerrar indentaciones abiertas
+        while len(self.indent_stack) > 1:
+            self.indent_stack.pop()
+            tokens.append(Token("DEDENT", "DEDENT", self.linea))
+
         return tokens, errores
-
-    def identificador(self, linea):
-        inicio = self.pos
-
-        while self.pos < len(self.texto) and self.texto[self.pos].isalpha():
-            self.pos += 1
-
-        palabra = self.texto[inicio:self.pos]
-
-        # error tipo ejecutar3
-        if self.pos < len(self.texto) and self.texto[self.pos].isdigit():
-
-            while self.pos < len(self.texto) and self.texto[self.pos].isalnum():
-                self.pos += 1
-
-            valor = self.texto[inicio:self.pos]
-            return Token("ERROR LEXICO", valor, linea)
-
-        if palabra in self.PALABRAS_RESERVADAS:
-            return Token("PALABRA_RESERVADA", palabra, linea)
-
-        if palabra in self.OPERADORES_PALABRA:
-            return Token("OPERADOR", palabra, linea)
-
-        return Token("IDENTIFICADOR", palabra, linea)
-
-    def numero_o_error(self, linea):
-        inicio = self.pos
-
-        while self.pos < len(self.texto) and self.texto[self.pos].isdigit():
-            self.pos += 1
-
-        
-        if self.pos < len(self.texto) and self.texto[self.pos].isalpha():
-            while self.pos < len(self.texto) and self.texto[self.pos].isalnum():
-                self.pos += 1
-
-            valor = self.texto[inicio:self.pos]
-            return Token("ERROR LEXICO", valor, linea)
-
-        return Token("NUMERO", self.texto[inicio:self.pos], linea)
-
-    def peek(self, n):
-        return self.texto[self.pos:self.pos + n]
 
 
 class LexicoModel:
-    def analizar(self, codigo: str):
+    def analizar(self, codigo):
         lexer = Lexer(codigo)
         return lexer.analizar_con_errores()

@@ -4,6 +4,7 @@ from models.lexico_model import Lexer
 from models.sintactico_model import Parser
 from models.semantico_model import AnalizadorSemantico
 
+
 class LexicoController:
 
     def __init__(self, window):
@@ -24,7 +25,7 @@ class LexicoController:
         )
         if file_path:
             with open(file_path, "r", encoding="utf-8") as f:
-                self.window.editor_panel.editor.setPlainText(f.read())
+                self.window.editor_panel.set_code(f.read())
 
     def analizar(self):
         codigo = self.window.editor_panel.get_code()

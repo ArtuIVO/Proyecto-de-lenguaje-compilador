@@ -3,15 +3,33 @@ GRAMMAR = """
 
 <sentencias> ::= <sentencia> | <sentencia> <sentencias>
 
-<sentencia> ::= <if> | <asignacion> | <expresion>
-
-<if> ::= "si" <expresion> ":" <sentencias>
+<sentencia> ::= <asignacion>
+              | <if>
+              | <escribir>
 
 <asignacion> ::= IDENTIFICADOR "=" <expresion>
 
-<expresion> ::= <termino> | <termino> <operador> <expresion>
+<if> ::= "si" <expresion> ":" <sentencia>
 
-<termino> ::= IDENTIFICADOR | NUMERO
+<escribir> ::= "escribir" "(" <expresion> ")"
 
-<operador> ::= "==" | "!=" | "<" | ">" | "<=" | ">=" | "y" | "o"
+<expresion> ::= <comparacion>
+
+<comparacion> ::= <aritmetica>
+                | <aritmetica> "==" <aritmetica>
+                | <aritmetica> "!=" <aritmetica>
+                | <aritmetica> "<" <aritmetica>
+                | <aritmetica> ">" <aritmetica>
+
+<aritmetica> ::= <termino>
+               | <aritmetica> "+" <termino>
+               | <aritmetica> "-" <termino>
+
+<termino> ::= <factor>
+            | <termino> "*" <factor>
+            | <termino> "/" <factor>
+
+<factor> ::= NUMERO
+           | IDENTIFICADOR
+           | "(" <expresion> ")"
 """

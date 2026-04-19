@@ -33,16 +33,6 @@ class MainWindow(QMainWindow):
         self.action_abrir = QAction("Abrir", self)
         self.action_abrir.setShortcut("Ctrl+O")
 
-    def _crear_menu(self):
-        menu = self.menuBar()
-
-        archivo = menu.addMenu("Archivo")
-        archivo.addAction(self.action_abrir)
-        archivo.addAction(self.action_limpiar)
-
-        compilar = menu.addMenu("Compilar")
-        compilar.addAction(self.action_analizar)
-
     def _crear_toolbar(self):
         bar = QToolBar()
         self.addToolBar(bar)
