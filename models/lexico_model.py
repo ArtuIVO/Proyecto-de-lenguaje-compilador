@@ -131,7 +131,7 @@ class Lexer:
 
                 inicio = self.pos
 
-                while self.actual() and self.actual().isalnum():
+                while self.actual() and self.actual().isalnum(): # type: ignore
                     self.avanzar()
 
                 palabra = self.texto[inicio:self.pos]
@@ -175,7 +175,7 @@ class Lexer:
 
                 inicio = self.pos
 
-                while self.actual() and self.actual().isdigit():
+                while self.actual() and self.actual().isdigit(): # type: ignore
                     self.avanzar()
 
                 numero = self.texto[inicio:self.pos]
