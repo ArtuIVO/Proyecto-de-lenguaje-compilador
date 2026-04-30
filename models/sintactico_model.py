@@ -1,4 +1,5 @@
 from models.ast_nodes import *
+from models.error import CompilerError
 
 
 class Parser:
@@ -6,6 +7,8 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
+
+    # ---------------------
 
     def actual(self):
         if self.pos < len(self.tokens):
@@ -23,16 +26,16 @@ class Parser:
                 self.avanzar()
                 return tok
 
-        raise Exception("Sintaxis inválida")
+        linea = tok.linea if tok else 0
+        raise CompilerError("Sintaxis inválida", linea)
 
     def saltar_newlines(self):
         while self.actual() and self.actual().tipo == "NEWLINE":
             self.avanzar()
 
-    # ----------------------------------
+    # ---------------------
 
     def parse(self):
-
         sentencias = []
 
         self.saltar_newlines()
@@ -43,10 +46,9 @@ class Parser:
 
         return Programa(sentencias)
 
-    # ----------------------------------
+    # ---------------------
 
     def sentencia(self):
-
         tok = self.actual()
 
         if tok.valor == "funcion":
@@ -70,39 +72,12 @@ class Parser:
         if tok.tipo == "IDENTIFICADOR":
             return self.asignacion()
 
-        raise Exception("Sentencia inválida")
-    
-    # ----------------------------------
-    def para_stmt(self):
+        raise CompilerError("Sentencia inválida", tok.linea if tok else 0)
 
-        self.match("PALABRA_RESERVADA", "para")
-
-        variable = self.match("IDENTIFICADOR").valor
-
-        self.match("PALABRA_RESERVADA", "en")
-
-        self.match("PALABRA_RESERVADA", "rango")
-
-        self.match("SIMBOLO", "(")
-
-        inicio = self.expresion()
-
-        self.match("SIMBOLO", ",")
-
-        fin = self.expresion()
-
-        self.match("SIMBOLO", ")")
-
-        self.match("SIMBOLO", ":")
-
-        self.match("NEWLINE")
-
-        cuerpo = self.bloque()
-
-        return Para(variable, inicio, fin, cuerpo)
+    # ---------------------
+    # BLOQUES (INDENT / DEDENT)
 
     def bloque(self):
-
         sentencias = []
 
         self.match("INDENT")
@@ -117,11 +92,31 @@ class Parser:
 
         return sentencias
 
-    # ----------------------------------
+    # ---------------------
+    # SENTENCIAS
+
+    def asignacion(self):
+        tok = self.match("IDENTIFICADOR")
+        nombre = tok.valor
+
+        self.match("OPERADOR", "=")
+        valor = self.expresion()
+
+        return Asignacion(nombre, valor, tok.linea)
+
+    def escribir(self):
+        tok = self.match("PALABRA_RESERVADA", "escribir")
+
+        self.match("SIMBOLO", "(")
+        valor = self.expresion()
+        self.match("SIMBOLO", ")")
+
+        return Escribir(valor, tok.linea)
+
+    # ---------------------
 
     def funcion_stmt(self):
-
-        self.match("PALABRA_RESERVADA", "funcion")
+        tok = self.match("PALABRA_RESERVADA", "funcion")
 
         nombre = self.match("IDENTIFICADOR").valor
 
@@ -134,63 +129,29 @@ class Parser:
 
             while self.actual().valor == ",":
                 self.match("SIMBOLO", ",")
-                parametros.append(
-                    self.match("IDENTIFICADOR").valor
-                )
+                parametros.append(self.match("IDENTIFICADOR").valor)
 
         self.match("SIMBOLO", ")")
-
         self.match("SIMBOLO", ":")
-
         self.match("NEWLINE")
 
         cuerpo = self.bloque()
 
-        return Funcion(nombre, parametros, cuerpo)
-
-    # ----------------------------------
+        return Funcion(nombre, parametros, cuerpo, tok.linea)
 
     def retornar_stmt(self):
-
-        self.match("PALABRA_RESERVADA", "retornar")
-
+        tok = self.match("PALABRA_RESERVADA", "retornar")
         valor = self.expresion()
+        return Retornar(valor, tok.linea)
 
-        return Retornar(valor)
-
-    # ----------------------------------
-
-    def asignacion(self):
-
-        nombre = self.match("IDENTIFICADOR").valor
-
-        self.match("OPERADOR", "=")
-
-        valor = self.expresion()
-
-        return Asignacion(nombre, valor)
-
-    def escribir(self):
-
-        self.match("PALABRA_RESERVADA", "escribir")
-        self.match("SIMBOLO", "(")
-
-        valor = self.expresion()
-
-        self.match("SIMBOLO", ")")
-
-        return Escribir(valor)
-
-    # ----------------------------------
+    # ---------------------
 
     def if_stmt(self):
-
-        self.match("PALABRA_RESERVADA", "si")
+        tok = self.match("PALABRA_RESERVADA", "si")
 
         condicion = self.expresion()
 
         self.match("SIMBOLO", ":")
-
         self.match("NEWLINE")
 
         cuerpo = self.bloque()
@@ -200,91 +161,111 @@ class Parser:
         self.saltar_newlines()
 
         if self.actual() and self.actual().valor == "sino":
-
             self.match("PALABRA_RESERVADA", "sino")
             self.match("SIMBOLO", ":")
             self.match("NEWLINE")
 
             sino = self.bloque()
 
-        return If(condicion, cuerpo, sino)
+        return If(condicion, cuerpo, sino, tok.linea)
+
+    # ---------------------
 
     def while_stmt(self):
-
-        self.match("PALABRA_RESERVADA", "mientras")
+        tok = self.match("PALABRA_RESERVADA", "mientras")
 
         condicion = self.expresion()
 
         self.match("SIMBOLO", ":")
-
         self.match("NEWLINE")
 
         cuerpo = self.bloque()
 
-        return While(condicion, cuerpo)
+        return While(condicion, cuerpo, tok.linea)
 
-    # ----------------------------------
+    # ---------------------
+
+    def para_stmt(self):
+        tok = self.match("PALABRA_RESERVADA", "para")
+
+        variable = self.match("IDENTIFICADOR").valor
+
+        self.match("PALABRA_RESERVADA", "en")
+        self.match("PALABRA_RESERVADA", "rango")
+
+        self.match("SIMBOLO", "(")
+
+        inicio = self.expresion()
+
+        self.match("SIMBOLO", ",")
+
+        fin = self.expresion()
+
+        self.match("SIMBOLO", ")")
+        self.match("SIMBOLO", ":")
+        self.match("NEWLINE")
+
+        cuerpo = self.bloque()
+
+        return Para(variable, inicio, fin, cuerpo, tok.linea)
+
+    # ---------------------
+    # EXPRESIONES
 
     def expresion(self):
         return self.comparacion()
 
     def comparacion(self):
-
         nodo = self.aritmetica()
 
         while self.actual() and self.actual().valor in (
             "==", "!=", "<", ">", "<=", ">="
         ):
-            op = self.match("OPERADOR").valor
+            op = self.match("OPERADOR")
             derecho = self.aritmetica()
-            nodo = BinOp(nodo, op, derecho)
+            nodo = BinOp(nodo, op.valor, derecho, op.linea)
 
         return nodo
 
     def aritmetica(self):
-
         nodo = self.termino()
 
         while self.actual() and self.actual().valor in ("+", "-"):
-            op = self.match("OPERADOR").valor
+            op = self.match("OPERADOR")
             derecho = self.termino()
-            nodo = BinOp(nodo, op, derecho)
+            nodo = BinOp(nodo, op.valor, derecho, op.linea)
 
         return nodo
 
     def termino(self):
-
         nodo = self.factor()
 
         while self.actual() and self.actual().valor in ("*", "/"):
-            op = self.match("OPERADOR").valor
+            op = self.match("OPERADOR")
             derecho = self.factor()
-            nodo = BinOp(nodo, op, derecho)
+            nodo = BinOp(nodo, op.valor, derecho, op.linea)
 
         return nodo
 
-    def factor(self):
+    # ---------------------
 
+    def factor(self):
         tok = self.actual()
+
+        if tok.tipo == "NUMERO":
+            self.avanzar()
+            return Numero(tok.valor, tok.linea)
 
         if tok.tipo == "STRING":
             self.avanzar()
-            return Cadena(tok.valor)
-        
+            return Cadena(tok.valor, tok.linea)
 
-        # número
-        if tok.tipo == "NUMERO":
-            self.avanzar()
-            return Numero(tok.valor)
-
-        # lista literal [1,2,3]
         if tok.valor == "[":
             return self.lista_literal()
 
-        # identificador
         if tok.tipo == "IDENTIFICADOR":
 
-            # acceso lista nums[0]
+            # acceso lista
             if (
                 self.pos + 1 < len(self.tokens)
                 and self.tokens[self.pos + 1].valor == "["
@@ -299,63 +280,45 @@ class Parser:
                 return self.llamada()
 
             self.avanzar()
-            return Identificador(tok.valor)
+            return Identificador(tok.valor, tok.linea)
 
-        # paréntesis
         if tok.valor == "(":
             self.match("SIMBOLO", "(")
             expr = self.expresion()
             self.match("SIMBOLO", ")")
             return expr
 
-        raise Exception("Expresión inválida")
-    # ----------------------------------
+        raise CompilerError("Expresión inválida", tok.linea if tok else 0)
+
+    # ---------------------
 
     def llamada(self):
-
-        nombre = self.match("IDENTIFICADOR").valor
+        tok = self.match("IDENTIFICADOR")
+        nombre = tok.valor
 
         self.match("SIMBOLO", "(")
 
-        argumentos = []
+        args = []
 
         if self.actual().valor != ")":
-            argumentos.append(self.expresion())
+            args.append(self.expresion())
 
             while self.actual().valor == ",":
                 self.match("SIMBOLO", ",")
-                argumentos.append(self.expresion())
+                args.append(self.expresion())
 
         self.match("SIMBOLO", ")")
 
-        return Llamada(nombre, argumentos)
-    
-    def lista(self):
+        return Llamada(nombre, args, tok.linea)
 
-        self.match("SIMBOLO", "[")
+    # ---------------------
 
-        elementos = []
-
-        if self.actual().valor != "]":
-
-            elementos.append(self.expresion())
-
-            while self.actual().valor == ",":
-                self.match("SIMBOLO", ",")
-                elementos.append(self.expresion())
-
-        self.match("SIMBOLO", "]")
-
-        return Lista(elementos)
-    
     def lista_literal(self):
-
-        self.match("SIMBOLO", "[")
+        tok = self.match("SIMBOLO", "[")
 
         elementos = []
 
         if self.actual().valor != "]":
-
             elementos.append(self.expresion())
 
             while self.actual().valor == ",":
@@ -364,11 +327,13 @@ class Parser:
 
         self.match("SIMBOLO", "]")
 
-        return Lista(elementos)
-    
-    def acceso_lista(self):
+        return Lista(elementos, tok.linea)
 
-        nombre = self.match("IDENTIFICADOR").valor
+    # ---------------------
+
+    def acceso_lista(self):
+        tok = self.match("IDENTIFICADOR")
+        nombre = tok.valor
 
         self.match("SIMBOLO", "[")
 
@@ -376,4 +341,4 @@ class Parser:
 
         self.match("SIMBOLO", "]")
 
-        return AccesoLista(nombre, indice)
+        return AccesoLista(nombre, indice, tok.linea)

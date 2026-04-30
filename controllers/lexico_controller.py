@@ -10,6 +10,7 @@ from models.semantico_model import AnalizadorSemantico
 from npc.npc_parser import NPCParser
 from npc.npc_semantic import NPCSemantic
 
+from models.error import CompilerError
 
 class LexicoController:
 
@@ -75,12 +76,22 @@ class LexicoController:
 
             self.window.statusBar().showMessage("Compilación exitosa")
 
+        
+
+        except CompilerError as e:
+            self.window.results_panel.show_error({
+                "linea": e.linea,
+                "error": "Error sintáctico/semántico",
+                "detalle": e.mensaje,
+                "solucion": "Revisa la estructura del código"
+            })
+
         except Exception as e:
             self.window.results_panel.show_error({
                 "linea": 0,
-                "error": "Error sintáctico/semántico",
+                "error": "Error crítico",
                 "detalle": str(e),
-                "solucion": "Revisa la estructura del código"
+                "solucion": "Error interno del compilador"
             })
 
     def limpiar(self):

@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import (
     QColor, QPainter, QTextCharFormat,
-    QSyntaxHighlighter, QFont, QTextFormat
+    QSyntaxHighlighter, QFont, QTextFormat,QTextCursor, QKeyEvent
 )
 from PyQt6.QtCore import QRect, QSize, Qt, QRegularExpression
 
@@ -208,20 +208,34 @@ class CodeEditor(QPlainTextEdit):
 
     def keyPressEvent(self, event):
 
+        # TAB manual
         if event.key() == Qt.Key.Key_Tab:
             self.insertPlainText("    ")
             return
 
-        if event.key() == Qt.Key.Key_Return:
+        # ENTER inteligente
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+
             cursor = self.textCursor()
             linea = cursor.block().text()
 
+            # contar espacios actuales
             espacios = len(linea) - len(linea.lstrip(" "))
+            indent = " " * espacios
 
+            # detectar :
+            if linea.rstrip().endswith(":"):
+                indent += "    "
+
+            # ejecutar salto de línea
             super().keyPressEvent(event)
-            self.insertPlainText(" " * espacios)
+
+            # insertar indentación
+            self.insertPlainText(indent)
+
             return
 
+        # resto normal
         super().keyPressEvent(event)
 
 # ---------- PANEL ----------
