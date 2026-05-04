@@ -17,43 +17,89 @@ class SyntaxHighlighter(QSyntaxHighlighter):
 
         self.rules = []
 
-        # palabras reservadas
-        formato = QTextCharFormat()
-        formato.setForeground(QColor("#00ff9c"))
-        formato.setFontWeight(QFont.Weight.Bold)
+        # ===== PALABRAS RESERVADAS =====
+        formato_kw = QTextCharFormat()
+        formato_kw.setForeground(QColor("#1F3A5F"))
+        formato_kw.setFontWeight(QFont.Weight.Bold)
 
         palabras = [
-            "si", "escribir", "cuando", "ejecutar"
+            "si",
+            "sino",
+            "mientras",
+            "escribir",
+            "cuando",
+            "ejecutar",
+            "funcion",
+            "retornar",
+            "para",
+            "en",
+            "rango",
+            "npc",
+            "hablar",
+            "mover",
+            "patrullar",
+            "atacar",
+            "vida",
+            "animar",
+            "esperar",
+            "ruta",
         ]
 
         for palabra in palabras:
             self.rules.append(
-                (
-                    QRegularExpression(rf"\b{palabra}\b"),
-                    formato
-                )
+                (QRegularExpression(rf"\b{palabra}\b"), formato_kw)
             )
 
-        # numeros
+        # ===== NÚMEROS =====
         formato_num = QTextCharFormat()
-        formato_num.setForeground(QColor("#ffd700"))
+        formato_num.setForeground(QColor("#B58900"))
 
         self.rules.append(
             (QRegularExpression(r"\b\d+\b"), formato_num)
         )
 
-        # operadores
+        # ===== STRINGS =====
+        formato_str = QTextCharFormat()
+        formato_str.setForeground(QColor("#3A7D44"))
+
+        self.rules.append(
+            (QRegularExpression(r'"[^"]*"|\'[^\']*\''), formato_str)
+        )
+
+        # ===== OPERADORES =====
         formato_op = QTextCharFormat()
-        formato_op.setForeground(QColor("#ff7b72"))
+        formato_op.setForeground(QColor("#444444"))
 
         self.rules.append(
             (
-                QRegularExpression(r"(==|!=|<=|>=|=|<|>)"),
+                QRegularExpression(r"(==|!=|<=|>=|=|<|>|\+|\-|\*|/)"),
                 formato_op
             )
         )
 
+        # ===== FUNCIONES =====
+        formato_func = QTextCharFormat()
+        formato_func.setForeground(QColor("#2C5AA0"))
+
+        self.rules.append(
+            (
+                QRegularExpression(r"\b[a-zA-Z_][a-zA-Z0-9_]*(?=\()"),
+                formato_func
+            )
+        )
+
+        # ===== COMENTARIOS =====
+        formato_comment = QTextCharFormat()
+        formato_comment.setForeground(QColor("#888888"))
+
+        self.rules.append(
+            (QRegularExpression(r"#.*"), formato_comment)
+        )
+
     def highlightBlock(self, text):
+
+        self.setFormat(0, len(text), QTextCharFormat())  # 🔥 reset
+
         for patron, formato in self.rules:
             it = patron.globalMatch(text)
 
@@ -72,6 +118,7 @@ class LineNumberArea(QWidget):
     def __init__(self, editor):
         super().__init__(editor)
         self.editor = editor
+        self.setStyleSheet("background-color: #F5E6CC; border: none;")
 
     def sizeHint(self):
         return QSize(
@@ -81,11 +128,13 @@ class LineNumberArea(QWidget):
 
     def paintEvent(self, event):
         self.editor.lineNumberAreaPaintEvent(event)
+
 # ---------- EDITOR ----------
 class CodeEditor(QPlainTextEdit):
 
     def __init__(self):
         super().__init__()
+        self.setFrameStyle(0)
 
         self.setFont(QFont("Consolas", 12))
         self.setTabStopDistance(40)
@@ -149,8 +198,7 @@ class CodeEditor(QPlainTextEdit):
 
     def lineNumberAreaPaintEvent(self, event):
         painter = QPainter(self.lineNumberArea)
-        painter.fillRect(event.rect(), QColor("#111111"))
-
+        painter.fillRect(event.rect(), QColor("#F5E6CC"))  # fondo beige
         block = self.firstVisibleBlock()
         blockNumber = block.blockNumber()
         top = round(
@@ -168,7 +216,7 @@ class CodeEditor(QPlainTextEdit):
             if block.isVisible():
                 number = str(blockNumber + 1)
 
-                painter.setPen(QColor("#00ff9c"))
+                painter.setPen(QColor("#1F3A5F"))     
 
                 painter.drawText(
                     0, top,
@@ -191,7 +239,7 @@ class CodeEditor(QPlainTextEdit):
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
 
-            color = QColor("#002b20")
+            color = QColor("#E6F0FF")  # azul claro
 
             selection.format.setBackground(color)
             selection.format.setProperty(
