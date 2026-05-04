@@ -6,7 +6,6 @@ from models.lexico_model import Lexer
 from models.sintactico_model import Parser
 from models.semantico_model import AnalizadorSemantico
 
-from models.semantico_model import AnalizadorSemantico
 from npc.npc_parser import NPCParser
 from npc.npc_semantic import NPCSemantic
 
@@ -67,12 +66,29 @@ class LexicoController:
             ast = parser.parse()
             # MOSTRAR AST SIEMPRE
             self.window.results_panel.load_ast(ast)
+
             # SEMÁNTICO
             sem.analizar(ast)
 
+            # RESULTADOS
             self.window.results_panel.load_resultados(
                 [str(x) for x in sem.salida]
             )
+
+            # NUEVO — TRAZA + TABLA DE SÍMBOLOS
+            traza_total = []
+
+            if hasattr(parser, "traza"):
+                traza_total += parser.traza
+
+            if hasattr(sem, "traza"):
+                traza_total += sem.traza
+
+            self.window.results_panel.load_traza(traza_total)
+
+            # solo si existe tabla (evita romper NPC)
+            if hasattr(sem, "tabla_simbolos"):
+                self.window.results_panel.load_simbolos(sem.tabla_simbolos)
 
             self.window.statusBar().showMessage("Compilación exitosa")
 

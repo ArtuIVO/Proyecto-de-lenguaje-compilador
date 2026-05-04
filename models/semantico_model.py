@@ -1,6 +1,15 @@
 from models.error import CompilerError
 
 
+class Simbolo:
+    def __init__(self, nombre, tipo, valor, linea, scope="global"):
+        self.nombre = nombre
+        self.tipo = tipo
+        self.valor = valor
+        self.linea = linea
+        self.scope = scope
+
+
 class RetornoFuncion(Exception):
     def __init__(self, valor):
         self.valor = valor
@@ -9,9 +18,10 @@ class RetornoFuncion(Exception):
 class AnalizadorSemantico:
 
     def __init__(self):
-        self.variables = {}
+        self.tabla_simbolos = {}
         self.funciones = {}
         self.salida = []
+        self.traza = []
 
     # ----------------------
 
@@ -36,8 +46,24 @@ class AnalizadorSemantico:
     # ----------------------
 
     def visitar_Identificador(self, nodo):
-        if nodo.nombre in self.variables:
-            return self.variables[nodo.nombre]
+
+        if nodo.nombre in self.tabla_simbolos:
+            valor = self.tabla_simbolos[nodo.nombre].valor
+
+            self.traza.append({
+                "linea": nodo.linea,
+                "accion": f"Uso variable '{nodo.nombre}'",
+                "valor": valor,
+                "valido": True
+            })
+
+            return valor
+
+        self.traza.append({
+            "linea": nodo.linea,
+            "accion": f"Variable no definida '{nodo.nombre}'",
+            "valido": False
+        })
 
         raise CompilerError(
             f"Variable no definida: {nodo.nombre}",
@@ -47,13 +73,45 @@ class AnalizadorSemantico:
     # ----------------------
 
     def visitar_Asignacion(self, nodo):
-        valor = self.analizar(nodo.valor)
-        self.variables[nodo.nombre] = valor
 
+        valor = self.analizar(nodo.valor)
+        tipo = type(valor).__name__
+
+        # 🔥 si ya existe la variable → validar tipo
+        if nodo.nombre in self.tabla_simbolos:
+            tipo_anterior = self.tabla_simbolos[nodo.nombre].tipo
+
+            if tipo != tipo_anterior:
+                raise CompilerError(
+                    f"Error de tipo: '{nodo.nombre}' era {tipo_anterior} y ahora {tipo}",
+                    nodo.linea
+                )
+
+        self.tabla_simbolos[nodo.nombre] = Simbolo(
+            nodo.nombre,
+            tipo,
+            valor,
+            nodo.linea
+        )
+
+        self.traza.append({
+            "linea": nodo.linea,
+            "accion": f"Asignación '{nodo.nombre}' ({tipo})",
+            "valor": valor,
+            "valido": True
+        })
     # ----------------------
 
     def visitar_Escribir(self, nodo):
         valor = self.analizar(nodo.valor)
+
+        self.traza.append({
+            "linea": nodo.linea,
+            "accion": "Salida",
+            "valor": valor,
+            "valido": True
+        })
+
         self.salida.append(valor)
 
     # ----------------------
@@ -68,38 +126,18 @@ class AnalizadorSemantico:
         # -------- BUILTINS --------
 
         if nodo.nombre == "largo":
-            if len(nodo.argumentos) != 1:
-                raise CompilerError(
-                    "largo() recibe 1 argumento",
-                    nodo.linea
-                )
             valor = self.analizar(nodo.argumentos[0])
             return len(valor)
 
         if nodo.nombre == "mayus":
-            if len(nodo.argumentos) != 1:
-                raise CompilerError(
-                    "mayus() recibe 1 argumento",
-                    nodo.linea
-                )
             valor = self.analizar(nodo.argumentos[0])
             return str(valor).upper()
 
         if nodo.nombre == "minus":
-            if len(nodo.argumentos) != 1:
-                raise CompilerError(
-                    "minus() recibe 1 argumento",
-                    nodo.linea
-                )
             valor = self.analizar(nodo.argumentos[0])
             return str(valor).lower()
 
         if nodo.nombre == "tipo":
-            if len(nodo.argumentos) != 1:
-                raise CompilerError(
-                    "tipo() recibe 1 argumento",
-                    nodo.linea
-                )
             valor = self.analizar(nodo.argumentos[0])
             return type(valor).__name__
 
@@ -113,29 +151,29 @@ class AnalizadorSemantico:
 
         funcion = self.funciones[nodo.nombre]
 
-        if len(nodo.argumentos) != len(funcion.parametros):
-            raise CompilerError(
-                f"Cantidad incorrecta de parámetros en {nodo.nombre}",
-                nodo.linea
-            )
+        respaldo = self.tabla_simbolos.copy()
 
-        respaldo = self.variables.copy()
-
-        # scope local
         for i in range(len(funcion.parametros)):
             nombre = funcion.parametros[i]
             valor = self.analizar(nodo.argumentos[i])
-            self.variables[nombre] = valor
+
+            self.tabla_simbolos[nombre] = Simbolo(
+                nombre,
+                type(valor).__name__,
+                valor,
+                nodo.linea,
+                "local"
+            )
 
         try:
             for ins in funcion.cuerpo:
                 self.analizar(ins)
 
         except RetornoFuncion as r:
-            self.variables = respaldo
+            self.tabla_simbolos = respaldo
             return r.valor
 
-        self.variables = respaldo
+        self.tabla_simbolos = respaldo
         return None
 
     # ----------------------
@@ -145,9 +183,20 @@ class AnalizadorSemantico:
         raise RetornoFuncion(valor)
 
     # ----------------------
+    # 🔥 IF
 
     def visitar_If(self, nodo):
-        if self.analizar(nodo.condicion):
+
+        condicion = self.analizar(nodo.condicion)
+
+        self.traza.append({
+            "linea": nodo.linea,
+            "accion": "Evaluación IF",
+            "valor": condicion,
+            "valido": True
+        })
+
+        if condicion:
             for ins in nodo.cuerpo:
                 self.analizar(ins)
         else:
@@ -155,12 +204,15 @@ class AnalizadorSemantico:
                 self.analizar(ins)
 
     # ----------------------
+    # 🔥 WHILE
 
     def visitar_While(self, nodo):
+
         limite = 10000
         contador = 0
 
         while self.analizar(nodo.condicion):
+
             contador += 1
 
             if contador > limite:
@@ -169,44 +221,56 @@ class AnalizadorSemantico:
                     nodo.linea
                 )
 
+            self.traza.append({
+                "linea": nodo.linea,
+                "accion": "Iteración WHILE",
+                "valido": True
+            })
+
             for ins in nodo.cuerpo:
                 self.analizar(ins)
 
     # ----------------------
+    # 🔥 FOR
 
     def visitar_Para(self, nodo):
+
         inicio = self.analizar(nodo.inicio)
         fin = self.analizar(nodo.fin)
 
-        respaldo = self.variables.get(nodo.variable, None)
-        existia = nodo.variable in self.variables
-
         for i in range(inicio, fin):
-            self.variables[nodo.variable] = i
+
+            self.tabla_simbolos[nodo.variable] = Simbolo(
+                nodo.variable,
+                "int",
+                i,
+                nodo.linea
+            )
+
+            self.traza.append({
+                "linea": nodo.linea,
+                "accion": f"For {nodo.variable} = {i}",
+                "valido": True
+            })
 
             for ins in nodo.cuerpo:
                 self.analizar(ins)
 
-        if existia:
-            self.variables[nodo.variable] = respaldo
-        else:
-            if nodo.variable in self.variables:
-                del self.variables[nodo.variable]
-
     # ----------------------
+    # 🔥 LISTAS
 
     def visitar_Lista(self, nodo):
         return [self.analizar(x) for x in nodo.elementos]
 
     def visitar_AccesoLista(self, nodo):
 
-        if nodo.nombre not in self.variables:
+        if nodo.nombre not in self.tabla_simbolos:
             raise CompilerError(
                 f"Variable no definida: {nodo.nombre}",
                 nodo.linea
             )
 
-        lista = self.variables[nodo.nombre]
+        lista = self.tabla_simbolos[nodo.nombre].valor
         indice = self.analizar(nodo.indice)
 
         try:
@@ -218,43 +282,42 @@ class AnalizadorSemantico:
             )
 
     # ----------------------
+    # 🔥 OPERACIONES
 
     def visitar_BinOp(self, nodo):
         izq = self.analizar(nodo.izquierda)
         der = self.analizar(nodo.derecha)
 
+        if type(izq) != type(der):
+            raise CompilerError(
+                f"Tipos incompatibles: {type(izq).__name__} y {type(der).__name__}",
+                nodo.linea
+            )
+
+        izq = self.analizar(nodo.izquierda)
+        der = self.analizar(nodo.derecha)
+
         if nodo.op == "+":
             return izq + der
-
         if nodo.op == "-":
             return izq - der
-
         if nodo.op == "*":
             return izq * der
-
         if nodo.op == "/":
             if der == 0:
-                raise CompilerError(
-                    "División entre cero",
-                    nodo.linea
-                )
+                raise CompilerError("División entre cero", nodo.linea)
             return izq / der
 
         if nodo.op == "==":
             return izq == der
-
         if nodo.op == "!=":
             return izq != der
-
         if nodo.op == "<":
             return izq < der
-
         if nodo.op == ">":
             return izq > der
-
         if nodo.op == "<=":
             return izq <= der
-
         if nodo.op == ">=":
             return izq >= der
 

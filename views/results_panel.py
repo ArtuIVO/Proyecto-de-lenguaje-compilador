@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QTabWidget,
     QTableWidget, QTableWidgetItem,
-    QListWidget, QTreeWidget, QTreeWidgetItem
+    QListWidget, QTreeWidget, QTreeWidgetItem, QPushButton
 )
 from PyQt6.QtGui import QColor
 
@@ -9,7 +9,22 @@ class ResultsPanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.modo_ast = "visual"
         self._setup_ui()
+        
+
+    def toggle_ast(self):
+        self.modo_ast = "tecnico" if self.modo_ast == "visual" else "visual"
+
+        # cambiar texto botón
+        if self.modo_ast == "visual":
+            self.btn_toggle_ast.setText("Vista AST: Visual")
+        else:
+            self.btn_toggle_ast.setText("Vista AST: Técnico")
+
+        # recargar árbol
+        if hasattr(self, "ultimo_ast"):
+            self.load_ast(self.ultimo_ast)
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
@@ -37,6 +52,20 @@ class ResultsPanel(QWidget):
         self.tabs.addTab(self.ast_tree, "AST")
 
         layout.addWidget(self.tabs)
+        # TRAZA
+        self.traza_list = QListWidget()
+        self.tabs.addTab(self.traza_list, "Análisis")
+
+        # TABLA SIMBOLOS
+        self.simbolos_table = QTableWidget(0, 4)
+        self.simbolos_table.setHorizontalHeaderLabels(
+            ["Nombre", "Tipo", "Valor", "Línea"]
+        )
+        self.tabs.addTab(self.simbolos_table, "Tabla de Símbolos (Semántico)")
+        # BOTÓN TOGGLE AST
+        self.btn_toggle_ast = QPushButton("Vista AST: Visual")
+        self.btn_toggle_ast.clicked.connect(self.toggle_ast)
+        layout.addWidget(self.btn_toggle_ast)
 
     def add_token(self, token):
         row = self.token_table.rowCount()
@@ -68,53 +97,235 @@ class ResultsPanel(QWidget):
         self.tabs.setCurrentIndex(2)
 
     def load_ast(self, ast):
+        self.ultimo_ast = ast 
         self.ast_tree.clear()
 
-        root = self._crear_item(ast)
+        if getattr(self, "modo_ast", "visual") == "tecnico":
+            root = self._crear_item_tecnico(ast)
+            self._cargar_hijos_tecnico(root, ast)
+        else:
+            root = self._crear_item_visual(ast)
+
         self.ast_tree.addTopLevelItem(root)
-
-        self._cargar_hijos(root, ast)
-
         self.ast_tree.expandAll()
         self.tabs.setCurrentIndex(3)
-    
-    def _crear_item(self, nodo):
 
-        nombre = type(nodo).__name__
+    def load_traza(self, datos):
+        self.traza_list.clear()
 
-        item = QTreeWidgetItem([nombre])
+        for x in datos:
+            texto = f"L{x['linea']} → {x['accion']}"
 
-        colores = {
-            # base lenguaje
-            "Programa": "#00ff9c",
-            "Asignacion": "#58a6ff",
-            "If": "#ffcc00",
-            "While": "#ff8800",
-            "Para": "#ffaa00",
-            "BinOp": "#ff7b72",
-            "Numero": "#79c0ff",
-            "Cadena": "#7ee787",
-            "Identificador": "#c9d1d9",
-            "Escribir": "#d2a8ff",
-            "Funcion": "#a371f7",
-            "Llamada": "#56d364",
-            "Retornar": "#ffb86b",
+            if "Asignación" in x["accion"]:
+                texto = "[SEM] " + texto
+            else:
+                texto = "[SYN] " + texto
 
-            # NPC
-            "NPC": "#ff4d6d",
-            "Hablar": "#00d4ff",
-            "Mover": "#00ffaa",
-            "Atacar": "#ff3333",
-            "Patrullar": "#ffaa33",
-            "Animar": "#bb88ff"
-        }
+            if "valor" in x:
+                texto += f" = {x['valor']}"
 
-        color = colores.get(nombre, "#FFFFFF")
+            if not x["valido"]:
+                texto += " X"
 
-        item.setForeground(0, QColor(color))
+            self.traza_list.addItem(texto)
 
-        return item
 
+    def load_simbolos(self, tabla):
+        self.simbolos_table.setRowCount(0)
+
+        for nombre, simbolo in tabla.items():
+            row = self.simbolos_table.rowCount()
+            self.simbolos_table.insertRow(row)
+
+            self.simbolos_table.setItem(row, 0, QTableWidgetItem(nombre))
+            self.simbolos_table.setItem(row, 1, QTableWidgetItem(simbolo.tipo))
+            self.simbolos_table.setItem(row, 2, QTableWidgetItem(str(simbolo.valor)))
+            self.simbolos_table.setItem(row, 3, QTableWidgetItem(str(simbolo.linea)))
+        
+    def _crear_item_visual(self, nodo):
+
+        from models.ast_nodes import Programa, Asignacion, If, While, Para, Funcion, Retornar, Escribir, BinOp, Lista, AccesoLista, Numero, Cadena, Identificador
+
+        # PROGRAMA
+        if isinstance(nodo, Programa):
+            item = QTreeWidgetItem(["Programa"])
+            for s in nodo.sentencias:
+                item.addChild(self._crear_item_visual(s))
+            return item
+
+        # ASIGNACION
+        if isinstance(nodo, Asignacion):
+            item = QTreeWidgetItem(["Asignación"])
+
+            item.addChild(QTreeWidgetItem([f"Variable: {nodo.nombre}"]))
+            item.addChild(self._crear_item_visual(nodo.valor))
+
+            return item
+
+        # IF
+        if isinstance(nodo, If):
+            item = QTreeWidgetItem(["Condicional"])
+
+            cond = QTreeWidgetItem(["Condición"])
+            cond.addChild(self._crear_item_visual(nodo.condicion))
+
+            cuerpo = QTreeWidgetItem(["Cuerpo"])
+            for ins in nodo.cuerpo:
+                cuerpo.addChild(self._crear_item_visual(ins))
+
+            item.addChild(cond)
+            item.addChild(cuerpo)
+
+            if nodo.sino:
+                sino = QTreeWidgetItem(["Sino"])
+                for ins in nodo.sino:
+                    sino.addChild(self._crear_item_visual(ins))
+                item.addChild(sino)
+
+            return item
+
+        # WHILE
+        if isinstance(nodo, While):
+            item = QTreeWidgetItem(["While"])
+
+            cond = QTreeWidgetItem(["Condición"])
+            cond.addChild(self._crear_item_visual(nodo.condicion))
+
+            cuerpo = QTreeWidgetItem(["Cuerpo"])
+            for ins in nodo.cuerpo:
+                cuerpo.addChild(self._crear_item_visual(ins))
+
+            item.addChild(cond)
+            item.addChild(cuerpo)
+
+            return item
+
+        # FOR
+        if isinstance(nodo, Para):
+            item = QTreeWidgetItem([f"For ({nodo.variable})"])
+
+            rango = QTreeWidgetItem(["Rango"])
+            rango.addChild(self._crear_item_visual(nodo.inicio))
+            rango.addChild(self._crear_item_visual(nodo.fin))
+
+            cuerpo = QTreeWidgetItem(["Cuerpo"])
+            for ins in nodo.cuerpo:
+                cuerpo.addChild(self._crear_item_visual(ins))
+
+            item.addChild(rango)
+            item.addChild(cuerpo)
+
+            return item
+
+        # FUNCION
+        if isinstance(nodo, Funcion):
+            item = QTreeWidgetItem([f"Función {nodo.nombre}"])
+
+            params = QTreeWidgetItem(["Parámetros"])
+            for p in nodo.parametros:
+                params.addChild(QTreeWidgetItem([p]))
+
+            cuerpo = QTreeWidgetItem(["Cuerpo"])
+            for ins in nodo.cuerpo:
+                cuerpo.addChild(self._crear_item_visual(ins))
+
+            item.addChild(params)
+            item.addChild(cuerpo)
+
+            return item
+
+        # RETORNAR
+        if isinstance(nodo, Retornar):
+            item = QTreeWidgetItem(["Retornar"])
+            item.addChild(self._crear_item_visual(nodo.valor))
+            return item
+
+        # ESCRIBIR
+        if isinstance(nodo, Escribir):
+            item = QTreeWidgetItem(["Salida"])
+            item.addChild(self._crear_item_visual(nodo.valor))
+            return item
+
+        # BINOP
+        if isinstance(nodo, BinOp):
+            item = QTreeWidgetItem([f"Operación {nodo.op}"])
+            item.addChild(self._crear_item_visual(nodo.izquierda))
+            item.addChild(self._crear_item_visual(nodo.derecha))
+            return item
+
+        # LISTA
+        if isinstance(nodo, Lista):
+            item = QTreeWidgetItem(["Lista"])
+            for e in nodo.elementos:
+                item.addChild(self._crear_item_visual(e))
+            return item
+
+        # ACCESO LISTA
+        if isinstance(nodo, AccesoLista):
+            item = QTreeWidgetItem([f"Acceso {nodo.nombre}"])
+            item.addChild(self._crear_item_visual(nodo.indice))
+            return item
+
+        # TERMINALES
+        if isinstance(nodo, Numero):
+            return QTreeWidgetItem([f"Número: {nodo.valor}"])
+
+        if isinstance(nodo, Cadena):
+            return QTreeWidgetItem([f"Texto: {nodo.valor}"])
+
+        if isinstance(nodo, Identificador):
+            return QTreeWidgetItem([f"Variable: {nodo.nombre}"])
+
+        return QTreeWidgetItem([type(nodo).__name__])
+
+    def _crear_item_tecnico(self, nodo):
+        return QTreeWidgetItem([type(nodo).__name__])
+
+
+    def _cargar_hijos_tecnico(self, padre, nodo):
+
+        # 🔥 SI NO ES NODO → detener
+        if not hasattr(nodo, "__dict__"):
+            return
+
+        for clave, valor in nodo.__dict__.items():
+
+            # LISTAS
+            if isinstance(valor, list):
+
+                rama = QTreeWidgetItem([clave])
+                padre.addChild(rama)
+
+                for elem in valor:
+
+                    # 🔥 SI ES NODO
+                    if hasattr(elem, "__dict__"):
+                        hijo = self._crear_item_tecnico(elem)
+                        rama.addChild(hijo)
+                        self._cargar_hijos_tecnico(hijo, elem)
+
+                    # 🔥 SI ES DATO SIMPLE (string, int, etc)
+                    else:
+                        rama.addChild(
+                            QTreeWidgetItem([str(elem)])
+                        )
+
+            # NODO INTERNO
+            elif hasattr(valor, "__dict__"):
+
+                rama = QTreeWidgetItem([clave])
+                padre.addChild(rama)
+
+                hijo = self._crear_item_tecnico(valor)
+                rama.addChild(hijo)
+
+                self._cargar_hijos_tecnico(hijo, valor)
+
+            # 🔥 DATO SIMPLE
+            else:
+                padre.addChild(
+                    QTreeWidgetItem([f"{clave}: {valor}"])
+                )
 
     def _cargar_hijos(self, padre, nodo):
 
@@ -193,3 +404,7 @@ class ResultsPanel(QWidget):
         self.error_list.clear()
         self.resultados_list.clear()
         self.ast_tree.clear()
+
+        # agregar esto
+        self.traza_list.clear()
+        self.simbolos_table.setRowCount(0)

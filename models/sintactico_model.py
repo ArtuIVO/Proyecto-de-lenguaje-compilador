@@ -5,6 +5,7 @@ from models.error import CompilerError
 class Parser:
 
     def __init__(self, tokens):
+        self.traza = []
         self.tokens = tokens
         self.pos = 0
 
@@ -23,10 +24,26 @@ class Parser:
 
         if tok and tok.tipo == tipo:
             if valor is None or tok.valor == valor:
+
+                self.traza.append({
+                    "linea": tok.linea,
+                    "token": tok.valor,
+                    "accion": f"Match {tipo}",
+                    "valido": True
+                })
+
                 self.avanzar()
                 return tok
 
         linea = tok.linea if tok else 0
+
+        self.traza.append({
+            "linea": linea,
+            "token": tok.valor if tok else "EOF",
+            "accion": "Error sintáctico",
+            "valido": False
+        })
+
         raise CompilerError("Sintaxis inválida", linea)
 
     def saltar_newlines(self):
