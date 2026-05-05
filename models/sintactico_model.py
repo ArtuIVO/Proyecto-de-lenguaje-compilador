@@ -87,6 +87,14 @@ class Parser:
             return self.para_stmt()
 
         if tok.tipo == "IDENTIFICADOR":
+             # 🔥 SI ES LLAMADA A FUNCIÓN
+            if (
+                self.pos + 1 < len(self.tokens)
+                and self.tokens[self.pos + 1].valor == "("
+            ):
+                return self.llamada()
+
+            # 🔥 SI NO → ASIGNACIÓN
             return self.asignacion()
 
         raise CompilerError("Sentencia inválida", tok.linea if tok else 0)

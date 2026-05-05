@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import (
     QListWidget, QTreeWidget, QTreeWidgetItem, QPushButton
 )
 from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QAbstractItemView
 
 class ResultsPanel(QWidget):
 
@@ -66,6 +68,26 @@ class ResultsPanel(QWidget):
         self.btn_toggle_ast = QPushButton("Vista AST: Visual")
         self.btn_toggle_ast.clicked.connect(self.toggle_ast)
         layout.addWidget(self.btn_toggle_ast)
+        # TOKENS
+        self.token_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.token_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+
+        # ERRORES
+        self.error_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+
+        # RESULTADOS
+        self.resultados_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+
+        # TRAZA
+        self.traza_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+
+        # AST
+        self.ast_tree.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.ast_tree.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+
+        # TABLA DE SÍMBOLOS
+        self.simbolos_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.simbolos_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
 
     def add_token(self, token):
         row = self.token_table.rowCount()

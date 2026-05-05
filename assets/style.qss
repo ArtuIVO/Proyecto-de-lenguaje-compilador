@@ -66,9 +66,11 @@ QTableWidget::item {
     padding: 6px;
 }
 
-QTableWidget::item:selected {
-    background-color: #2C5AA0;
-    color: white;
+QTableWidget::item:selected,
+QListWidget::item:selected,
+QTreeWidget::item:selected {
+    background-color: transparent;
+    color: #1F3A5F;
 }
 
 /* ===== HEADER TABLAS ===== */

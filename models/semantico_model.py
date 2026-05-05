@@ -18,7 +18,7 @@ class RetornoFuncion(Exception):
 class AnalizadorSemantico:
 
     def __init__(self):
-        self.tabla_simbolos = {}
+        self.scopes = [{}]
         self.funciones = {}
         self.salida = []
         self.traza = []
@@ -47,29 +47,23 @@ class AnalizadorSemantico:
 
     def visitar_Identificador(self, nodo):
 
-        if nodo.nombre in self.tabla_simbolos:
-            valor = self.tabla_simbolos[nodo.nombre].valor
+        for scope in reversed(self.scopes):
+            if nodo.nombre in scope:
+                valor = scope[nodo.nombre].valor
 
-            self.traza.append({
-                "linea": nodo.linea,
-                "accion": f"Uso variable '{nodo.nombre}'",
-                "valor": valor,
-                "valido": True
-            })
+                self.traza.append({
+                    "linea": nodo.linea,
+                    "accion": f"Uso variable '{nodo.nombre}'",
+                    "valor": valor,
+                    "valido": True
+                })
 
-            return valor
-
-        self.traza.append({
-            "linea": nodo.linea,
-            "accion": f"Variable no definida '{nodo.nombre}'",
-            "valido": False
-        })
+                return valor
 
         raise CompilerError(
             f"Variable no definida: {nodo.nombre}",
             nodo.linea
         )
-
     # ----------------------
 
     def visitar_Asignacion(self, nodo):
@@ -77,17 +71,7 @@ class AnalizadorSemantico:
         valor = self.analizar(nodo.valor)
         tipo = type(valor).__name__
 
-        # 🔥 si ya existe la variable → validar tipo
-        if nodo.nombre in self.tabla_simbolos:
-            tipo_anterior = self.tabla_simbolos[nodo.nombre].tipo
-
-            if tipo != tipo_anterior:
-                raise CompilerError(
-                    f"Error de tipo: '{nodo.nombre}' era {tipo_anterior} y ahora {tipo}",
-                    nodo.linea
-                )
-
-        self.tabla_simbolos[nodo.nombre] = Simbolo(
+        self.scopes[-1][nodo.nombre] = Simbolo(
             nodo.nombre,
             tipo,
             valor,
@@ -96,7 +80,7 @@ class AnalizadorSemantico:
 
         self.traza.append({
             "linea": nodo.linea,
-            "accion": f"Asignación '{nodo.nombre}' ({tipo})",
+            "accion": f"Asignación '{nodo.nombre}'",
             "valor": valor,
             "valido": True
         })
@@ -123,26 +107,7 @@ class AnalizadorSemantico:
 
     def visitar_Llamada(self, nodo):
 
-        # -------- BUILTINS --------
-
-        if nodo.nombre == "largo":
-            valor = self.analizar(nodo.argumentos[0])
-            return len(valor)
-
-        if nodo.nombre == "mayus":
-            valor = self.analizar(nodo.argumentos[0])
-            return str(valor).upper()
-
-        if nodo.nombre == "minus":
-            valor = self.analizar(nodo.argumentos[0])
-            return str(valor).lower()
-
-        if nodo.nombre == "tipo":
-            valor = self.analizar(nodo.argumentos[0])
-            return type(valor).__name__
-
-        # -------- FUNCIONES USUARIO --------
-
+        # función definida
         if nodo.nombre not in self.funciones:
             raise CompilerError(
                 f"Función no definida: {nodo.nombre}",
@@ -151,13 +116,15 @@ class AnalizadorSemantico:
 
         funcion = self.funciones[nodo.nombre]
 
-        respaldo = self.tabla_simbolos.copy()
+        # 🔥 nuevo scope
+        self.scopes.append({})
 
+        # parámetros
         for i in range(len(funcion.parametros)):
             nombre = funcion.parametros[i]
             valor = self.analizar(nodo.argumentos[i])
 
-            self.tabla_simbolos[nombre] = Simbolo(
+            self.scopes[-1][nombre] = Simbolo(
                 nombre,
                 type(valor).__name__,
                 valor,
@@ -170,12 +137,11 @@ class AnalizadorSemantico:
                 self.analizar(ins)
 
         except RetornoFuncion as r:
-            self.tabla_simbolos = respaldo
+            self.scopes.pop()
             return r.valor
 
-        self.tabla_simbolos = respaldo
+        self.scopes.pop()
         return None
-
     # ----------------------
 
     def visitar_Retornar(self, nodo):
@@ -240,7 +206,7 @@ class AnalizadorSemantico:
 
         for i in range(inicio, fin):
 
-            self.tabla_simbolos[nodo.variable] = Simbolo(
+            self.scopes[-1][nodo.variable] = Simbolo(
                 nodo.variable,
                 "int",
                 i,
@@ -264,23 +230,23 @@ class AnalizadorSemantico:
 
     def visitar_AccesoLista(self, nodo):
 
-        if nodo.nombre not in self.tabla_simbolos:
-            raise CompilerError(
-                f"Variable no definida: {nodo.nombre}",
-                nodo.linea
-            )
+        for scope in reversed(self.scopes):
+            if nodo.nombre in scope:
+                lista = scope[nodo.nombre].valor
+                indice = self.analizar(nodo.indice)
 
-        lista = self.tabla_simbolos[nodo.nombre].valor
-        indice = self.analizar(nodo.indice)
+                try:
+                    return lista[indice]
+                except Exception:
+                    raise CompilerError(
+                        "Índice fuera de rango",
+                        nodo.linea
+                    )
 
-        try:
-            return lista[indice]
-        except Exception:
-            raise CompilerError(
-                "Índice fuera de rango",
-                nodo.linea
-            )
-
+        raise CompilerError(
+            f"Variable no definida: {nodo.nombre}",
+            nodo.linea
+        )
     # ----------------------
     # 🔥 OPERACIONES
 

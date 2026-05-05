@@ -42,6 +42,7 @@ class LexicoController:
 
         self.window.results_panel.clear()
 
+
         try:
             # LEXICO
             lexer = Lexer(codigo)
@@ -74,6 +75,10 @@ class LexicoController:
             self.window.results_panel.load_resultados(
                 [str(x) for x in sem.salida]
             )
+            if not sem.salida:
+                self.window.results_panel.load_resultados(
+                    ["(Sin salida)"]
+                )
 
             # NUEVO — TRAZA + TABLA DE SÍMBOLOS
             traza_total = []
@@ -86,8 +91,13 @@ class LexicoController:
 
             self.window.results_panel.load_traza(traza_total)
 
-            # solo si existe tabla (evita romper NPC)
-            if hasattr(sem, "tabla_simbolos"):
+            
+            # 🔥 NUEVO — TABLA DE SÍMBOLOS (scope global)
+            if hasattr(sem, "scopes"):
+                self.window.results_panel.load_simbolos(sem.scopes[0])
+
+            # fallback (por compatibilidad con NPC viejo)
+            elif hasattr(sem, "tabla_simbolos"):
                 self.window.results_panel.load_simbolos(sem.tabla_simbolos)
 
             self.window.statusBar().showMessage("Compilación exitosa")
