@@ -15,13 +15,13 @@ class MainWindow(QMainWindow):
         self._setup_ui()
 
     def _setup_ui(self):
-        self.setWindowTitle("Compilador V1")
+        self.setWindowTitle("EduLang Compiler")
         self.resize(1200, 700)
 
         self._crear_acciones()
         self._crear_toolbar()
         self._crear_central()
-        self.statusBar().showMessage("Listo")
+        self.statusBar().showMessage("Listo") # type: ignore
 
     def _crear_acciones(self):
         self.action_analizar = QAction("Analizar", self)

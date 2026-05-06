@@ -1,5 +1,5 @@
 from models.error import CompilerError
-
+from models.builtins import Builtins
 
 class Simbolo:
     def __init__(self, nombre, tipo, valor, linea, scope="global"):
@@ -105,10 +105,48 @@ class AnalizadorSemantico:
 
     # ----------------------
 
+    
     def visitar_Llamada(self, nodo):
 
-        # función definida
+        # =====================================================
+        # BUILTINS OFICIALES
+        # =====================================================
+
+        if nodo.nombre in Builtins.FUNCTIONS:
+
+            argumentos = [
+                self.analizar(arg)
+                for arg in nodo.argumentos
+            ]
+
+            try:
+
+                resultado = Builtins.FUNCTIONS[
+                    nodo.nombre
+                ](*argumentos)
+
+                self.traza.append({
+                    "linea": nodo.linea,
+                    "accion": f"Builtin '{nodo.nombre}'",
+                    "valor": resultado,
+                    "valido": True
+                })
+
+                return resultado
+
+            except Exception as e:
+
+                raise CompilerError(
+                    f"Error en builtin '{nodo.nombre}': {str(e)}",
+                    nodo.linea
+                )
+
+        # =====================================================
+        # FUNCIONES DEL USUARIO
+        # =====================================================
+
         if nodo.nombre not in self.funciones:
+
             raise CompilerError(
                 f"Función no definida: {nodo.nombre}",
                 nodo.linea
@@ -116,13 +154,17 @@ class AnalizadorSemantico:
 
         funcion = self.funciones[nodo.nombre]
 
-        # 🔥 nuevo scope
+        # nuevo scope
         self.scopes.append({})
 
         # parámetros
         for i in range(len(funcion.parametros)):
+
             nombre = funcion.parametros[i]
-            valor = self.analizar(nodo.argumentos[i])
+
+            valor = self.analizar(
+                nodo.argumentos[i]
+            )
 
             self.scopes[-1][nombre] = Simbolo(
                 nombre,
@@ -133,16 +175,21 @@ class AnalizadorSemantico:
             )
 
         try:
+
             for ins in funcion.cuerpo:
                 self.analizar(ins)
 
         except RetornoFuncion as r:
+
             self.scopes.pop()
+
             return r.valor
 
         self.scopes.pop()
+
         return None
-    # ----------------------
+
+
 
     def visitar_Retornar(self, nodo):
         valor = self.analizar(nodo.valor)
