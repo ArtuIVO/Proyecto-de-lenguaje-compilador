@@ -109,6 +109,19 @@ class Lexer:
             # --------------------------------------------
 
             c = self.actual()
+            
+            # ---------- COMENTARIOS ----------
+            if c == "#":
+
+                while (
+                    self.actual()
+                    and self.actual() != "\n"
+                ):
+                    self.avanzar()
+
+                continue
+            
+
 
             if c is None:
                 break
@@ -127,11 +140,12 @@ class Lexer:
                 continue
 
             # ---------- IDENTIFICADOR ----------
-            if c.isalpha():
+            if c.isalpha() or c == "_":
 
                 inicio = self.pos
 
-                while self.actual() and self.actual().isalnum(): # type: ignore
+                while (self.actual() and (self.actual().isalnum() or self.actual() == "_")
+                        ): # type: ignore
                     self.avanzar()
 
                 palabra = self.texto[inicio:self.pos]
@@ -147,28 +161,50 @@ class Lexer:
 
                 continue
 
-            # strings
-            if c == '"':
+
+
+            # ---------- STRINGS ----------
+            if c in ['"', "'"]:
+
+                delimitador = c
+
                 self.avanzar()
+
                 inicio = self.pos
 
-                while self.actual() and self.actual() != '"':
+                while (
+                    self.actual()
+                    and self.actual() != delimitador
+                ):
                     self.avanzar()
 
                 texto = self.texto[inicio:self.pos]
 
-                if self.actual() != '"':
+                if self.actual() != delimitador:
+
                     errores.append({
                         "linea": self.linea,
                         "error": "Cadena sin cerrar",
                         "detalle": texto,
-                        "solucion": 'Cerrar con comillas "'
+                        "solucion": (
+                            f"Cerrar con {delimitador}"
+                        )
                     })
+
                 else:
+
                     self.avanzar()
-                    tokens.append(Token("STRING", texto, self.linea))
+
+                    tokens.append(
+                        Token(
+                            "STRING",
+                            texto,
+                            self.linea
+                        )
+                    )
 
                 continue
+
 
             # ---------- NÚMEROS ----------
             if c.isdigit():

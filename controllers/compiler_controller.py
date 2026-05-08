@@ -5,6 +5,7 @@ from models.lexico_model import Lexer
 from models.sintactico_model import Parser
 from models.semantico_model import AnalizadorSemantico
 from models.error import CompilerError
+from generators.python_generator import PythonGenerator
 
 
 class CompilerController:
@@ -13,7 +14,7 @@ class CompilerController:
 
         self.window = window
 
-        # 🌎 lenguaje actual del compilador
+        # lenguaje actual del compilador
         self.current_language = "EduLang"
 
         self._connect_signals()
@@ -35,6 +36,106 @@ class CompilerController:
         self.window.action_abrir.triggered.connect(
             self.abrir_archivo
         )
+        self.window.action_exportar_python.triggered.connect(
+            self.exportar_python
+        )
+    # =====================================================
+    # IMPORTAR 
+    # =====================================================
+    def importar_codigo(self):
+        pass
+    #======================================================
+    # EXPORTAR
+    #======================================================
+    
+    def exportar_python(self):
+
+        codigo = self.window.editor_panel.get_code()
+
+        if not codigo.strip():
+
+            self.window.statusBar().showMessage(
+                "No hay código para exportar"
+            )
+
+            return
+
+        try:
+
+            # =============================================
+            # COMPILAR
+            # =============================================
+
+            lexer = Lexer(codigo)
+
+            tokens, errores = lexer.analizar_con_errores()
+
+            if errores:
+
+                self.window.results_panel.show_error(
+                    errores[0]
+                )
+
+                return
+
+            parser = Parser(tokens)
+
+            ast = parser.parse()
+
+            # =============================================
+            # GENERAR PYTHON
+            # =============================================
+
+            generator = PythonGenerator()
+
+            generator.generate(ast)
+
+            codigo_python = generator.get_code()
+
+            # =============================================
+            # GUARDAR ARCHIVO
+            # =============================================
+
+            file_path, _ = QFileDialog.getSaveFileName(
+                self.window,
+                "Exportar Python",
+                "programa.py",
+                "Python Files (*.py)"
+            )
+
+            if not file_path:
+                return
+
+            with open(
+                file_path,
+                "w",
+                encoding="utf-8"
+            ) as f:
+
+                f.write(codigo_python)
+
+            self.window.statusBar().showMessage(
+                f"Python exportado: {file_path}"
+            )
+
+        except CompilerError as e:
+
+            self.window.results_panel.show_error({
+                "linea": e.linea,
+                "error": "Error exportando Python",
+                "detalle": e.mensaje,
+                "solucion": "Corrige el código antes de exportar"
+            })
+
+        except Exception as e:
+
+            self.window.results_panel.show_error({
+                "linea": 0,
+                "error": "Error crítico",
+                "detalle": str(e),
+                "solucion": "Error interno del exportador"
+            })
+
 
     # =====================================================
     # ARCHIVOS
@@ -128,6 +229,22 @@ class CompilerController:
             semantic = AnalizadorSemantico()
 
             semantic.analizar(ast)
+           
+            # =================================================
+            # GENERAR PYTHON
+            # =================================================
+
+            generator = PythonGenerator()
+
+            generator.generate(ast)
+
+            codigo_python = generator.get_code()
+
+            print("\n===== PYTHON GENERADO =====\n")
+
+            print(codigo_python)
+            
+
 
             # =================================================
             # RESULTADOS

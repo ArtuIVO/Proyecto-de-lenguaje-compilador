@@ -15,7 +15,9 @@ class MainWindow(QMainWindow):
         self._setup_ui()
 
     def _setup_ui(self):
-        self.setWindowTitle("EduLang Compiler")
+        self.setWindowTitle(
+            "EduLang Studio"
+        )
         self.resize(1200, 700)
 
         self._crear_acciones()
@@ -26,6 +28,14 @@ class MainWindow(QMainWindow):
     def _crear_acciones(self):
         self.action_analizar = QAction("Analizar", self)
         self.action_analizar.setShortcut("F1")
+        self.action_exportar_python = QAction(
+            "Exportar Python",
+            self
+        )
+
+        self.action_exportar_python.setShortcut(
+            "Ctrl+E"
+        )
 
         self.action_limpiar = QAction("Limpiar", self)
         self.action_limpiar.setShortcut("Ctrl+L")
@@ -40,6 +50,7 @@ class MainWindow(QMainWindow):
         bar.addAction(self.action_analizar)
         bar.addAction(self.action_abrir)
         bar.addAction(self.action_limpiar)
+        bar.addAction(self.action_exportar_python)
 
     def _crear_central(self):
         splitter = QSplitter(Qt.Orientation.Horizontal)
