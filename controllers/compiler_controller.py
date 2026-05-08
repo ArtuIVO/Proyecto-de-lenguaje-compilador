@@ -42,7 +42,7 @@ class CompilerController:
     # =====================================================
     # IMPORTAR 
     # =====================================================
-    def importar_codigo(self):
+    def importar_codigo(self): # type: ignore
         pass
     #======================================================
     # EXPORTAR
