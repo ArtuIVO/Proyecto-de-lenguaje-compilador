@@ -1,7 +1,6 @@
 from models.ast_nodes import *
 from models.error import CompilerError
 
-
 class Parser:
 
     def __init__(self, tokens):
@@ -85,6 +84,26 @@ class Parser:
 
         if tok.valor == "para":
             return self.para_stmt()
+
+        if tok.valor == "romper":
+
+            self.avanzar()
+
+            return Romper(tok.linea)
+
+
+        if tok.valor == "continuar":
+
+            self.avanzar()
+
+            return Continuar(tok.linea)
+
+
+        if tok.valor == "nulo":
+
+            self.avanzar()
+
+            return Nulo(tok.linea)
 
         TIPOS = {
             "entero",
@@ -296,7 +315,34 @@ class Parser:
     # EXPRESIONES
 
     def expresion(self):
-        return self.comparacion()
+        return self.expresion_logica()
+
+    def expresion_logica(self):
+
+        nodo = self.comparacion()
+
+        while (
+            self.actual()
+            and self.actual().valor in [
+                "y",
+                "o"
+            ]
+        ):
+
+            op = self.actual()
+
+            self.avanzar()
+
+            derecho = self.comparacion()
+
+            nodo = LogicalOp(
+                nodo,
+                op.valor,
+                derecho,
+                op.linea
+            )
+
+        return nodo
 
     def comparacion(self):
         nodo = self.aritmetica()
@@ -335,6 +381,15 @@ class Parser:
     def factor(self):
         tok = self.actual()
 
+        if tok.valor in ("+","-","no"):
+            self.avanzar()
+            valor = self.factor()
+            return UnaryOp(tok.valor, valor, tok.linea)
+        
+        if (tok.tipo == "PALABRA_RESERVADA" and tok.valor == "nulo"):
+            self.avanzar()
+            return Nulo(tok.linea)
+        
         if tok.tipo == "NUMERO":
             self.avanzar()
             return Numero(tok.valor, tok.linea)
@@ -345,6 +400,14 @@ class Parser:
 
         if tok.valor == "[":
             return self.lista_literal()
+        
+        if (
+            tok.tipo == "PALABRA_RESERVADA"
+            and tok.valor in ("verdadero", "falso")
+        ):
+            self.avanzar()
+            return Booleano(tok.valor == "verdadero", tok.linea)
+        
 
         if tok.tipo == "IDENTIFICADOR":
 

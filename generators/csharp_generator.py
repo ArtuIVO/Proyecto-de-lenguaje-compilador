@@ -197,6 +197,17 @@ class CSharpGenerator:
         self.emit("}")
 
     # =====================================================
+    # ROMPER Y CONTINUAR
+    # =====================================================
+    def generate_Romper(self, nodo):
+
+        self.emit("break;")
+
+    def generate_Continuar(self, nodo):
+
+        self.emit("continue;")
+
+    # =====================================================
     # FOR
     # =====================================================
 
@@ -292,6 +303,51 @@ class CSharpGenerator:
 
         if tipo == "Numero":
             return str(nodo.valor)
+        
+        if tipo == "Booleano":
+            return "true" if nodo.valor else "false"
+        
+        if tipo == "Nulo":
+            return "null"
+        
+        if tipo == "LogicalOp":
+
+            izq = self.generate_expr(
+                nodo.izquierda
+            )
+
+            der = self.generate_expr(
+                nodo.derecha
+            )
+
+            operadores = {
+
+                "y": "&&",
+
+                "o": "||"
+            }
+
+            op = operadores.get(
+                nodo.op,
+                nodo.op
+            )
+
+            return f"{izq} {op} {der}"
+
+
+        if tipo == "UnaryOp":
+
+            valor = self.generate_expr(
+                nodo.valor
+            )
+
+            if nodo.op == "no":
+
+                return f"!{valor}"
+
+            return f"{nodo.op}{valor}"
+
+
 
         if tipo == "Cadena":
             return f'"{nodo.valor}"'

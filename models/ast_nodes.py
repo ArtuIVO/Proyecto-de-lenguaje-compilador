@@ -66,10 +66,56 @@ class BinOp(Nodo):
         self.derecha = derecha
 
 
+class LogicalOp(Nodo):
+
+    def __init__(
+        self,
+        izquierda,
+        op,
+        derecha,
+        linea=0
+    ):
+
+        super().__init__(linea)
+
+        self.izquierda = izquierda
+        self.op = op
+        self.derecha = derecha
+
+
+class UnaryOp(Nodo):
+
+    def __init__(
+        self,
+        op,
+        valor,
+        linea=0
+    ):
+
+        super().__init__(linea)
+
+        self.op = op
+        self.valor = valor
+
+
 class Numero(Nodo):
     def __init__(self, valor, linea=0):
         super().__init__(linea)
         self.valor = valor
+
+
+class Booleano(Nodo):
+
+    def __init__(
+        self,
+        valor,
+        linea=0
+    ):
+
+        super().__init__(linea)
+
+        self.valor = valor
+
 
 
 class Cadena(Nodo):
@@ -102,6 +148,21 @@ class Retornar(Nodo):
     def __init__(self, valor, linea=0):
         super().__init__(linea)
         self.valor = valor
+
+
+class Romper(Nodo):
+    def __init__(self, linea=0):
+        super().__init__(linea)
+
+
+class Continuar(Nodo):
+    def __init__(self, linea=0):
+        super().__init__(linea)
+
+
+class Nulo(Nodo):
+    def __init__(self, linea=0):
+        super().__init__(linea)
 
 
 class Llamada(Nodo):

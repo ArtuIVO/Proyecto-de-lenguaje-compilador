@@ -27,6 +27,15 @@ class Lexer:
         "texto", 
         "booleano", 
         "lista",
+        "verdadero",
+        "falso",
+        "y",
+        "o",
+        "no",
+        "romper",
+        "continuar",
+        "nulo",
+        
     }
 
     OPERADORES = {

@@ -29,6 +29,13 @@ class RetornoFuncion(Exception):
     def __init__(self, valor):
         self.valor = valor
 
+class RomperLoop(Exception):
+    pass
+
+
+class ContinuarLoop(Exception):
+    pass
+
 
 class AnalizadorSemantico:
 
@@ -54,7 +61,10 @@ class AnalizadorSemantico:
 
     def visitar_Numero(self, nodo):
         return int(nodo.valor)
-
+    
+    def visitar_Booleano(self, nodo):
+        return nodo.valor
+    
     def visitar_Cadena(self, nodo):
         return nodo.valor
 
@@ -267,6 +277,23 @@ class AnalizadorSemantico:
     def visitar_Retornar(self, nodo):
         valor = self.analizar(nodo.valor)
         raise RetornoFuncion(valor)
+    
+
+    def visitar_Romper(self, nodo):
+
+        raise RomperLoop()
+
+
+    def visitar_Continuar(self, nodo):
+
+        raise ContinuarLoop()
+
+
+    def visitar_Nulo(self, nodo):
+
+        return None
+
+
 
     # ----------------------
     # 🔥 IF
@@ -294,27 +321,35 @@ class AnalizadorSemantico:
 
     def visitar_While(self, nodo):
 
-        limite = 10000
+        limite = 100000
         contador = 0
 
+   
         while self.analizar(nodo.condicion):
 
             contador += 1
 
             if contador > limite:
+
                 raise CompilerError(
                     "Bucle infinito detectado",
                     nodo.linea
                 )
 
-            self.traza.append({
-                "linea": nodo.linea,
-                "accion": "Iteración WHILE",
-                "valido": True
-            })
+            try:
 
-            for ins in nodo.cuerpo:
-                self.analizar(ins)
+                for ins in nodo.cuerpo:
+
+                    self.analizar(ins)
+
+            except ContinuarLoop:
+
+                continue
+
+            except RomperLoop:
+
+                break
+
 
     # ----------------------
     # 🔥 FOR
@@ -326,21 +361,29 @@ class AnalizadorSemantico:
 
         for i in range(inicio, fin):
 
-            self.scopes[-1][nodo.variable] = Simbolo(
+            self.scopes[-1][
+                nodo.variable
+            ] = Simbolo(
                 nodo.variable,
-                "int",
+                "entero",
                 i,
                 nodo.linea
             )
 
-            self.traza.append({
-                "linea": nodo.linea,
-                "accion": f"For {nodo.variable} = {i}",
-                "valido": True
-            })
+            try:
 
-            for ins in nodo.cuerpo:
-                self.analizar(ins)
+                for ins in nodo.cuerpo:
+
+                    self.analizar(ins)
+
+            except ContinuarLoop:
+
+                continue
+
+            except RomperLoop:
+
+                break
+   
 
     # ----------------------
     # 🔥 LISTAS
@@ -409,5 +452,34 @@ class AnalizadorSemantico:
 
         raise CompilerError(
             f"Operador no soportado: {nodo.op}",
+            nodo.linea
+        )
+    
+    def visitar_UnaryOp(self, nodo):
+        valor = self.analizar(nodo.valor)
+
+        if nodo.op == "+":
+            return +valor
+        if nodo.op == "-":
+            return -valor
+        if nodo.op == "no":
+            return not valor
+
+        raise CompilerError(
+            f"Operador unario no soportado: {nodo.op}",
+            nodo.linea
+        )
+    
+    def visitar_LogicalOp(self, nodo):
+        izq = self.analizar(nodo.izquierda)
+        der = self.analizar(nodo.derecha)
+
+        if nodo.op == "y":
+            return izq and der
+        if nodo.op == "o":
+            return izq or der
+
+        raise CompilerError(
+            f"Operador lógico no soportado: {nodo.op}",
             nodo.linea
         )

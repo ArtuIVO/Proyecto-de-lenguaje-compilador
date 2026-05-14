@@ -183,6 +183,19 @@ class PythonGenerator:
         self.emit(
             f"return {valor}"
         )
+    # =====================================================
+    # ROMPER Y CONTINUAR
+    # =====================================================
+    def generate_Romper(self, nodo):
+
+        self.emit(
+            f"break"
+        )
+    def generate_Continuar(self, nodo):
+
+        self.emit(
+            f"continue"
+        )
 
     # =====================================================
     # LLAMADAS
@@ -239,6 +252,51 @@ class PythonGenerator:
 
         if tipo == "Numero":
             return str(nodo.valor)
+        
+        if tipo == "Booleano":
+            return "True" if nodo.valor else "False"
+        
+        if tipo == "Nulo":
+            return "None"
+
+
+        if tipo == "LogicalOp":
+
+            izq = self.generate_expr(
+                nodo.izquierda
+            )
+
+            der = self.generate_expr(
+                nodo.derecha
+            )
+
+            operadores = {
+
+                "y": "and",
+
+                "o": "or"
+            }
+
+            op = operadores.get(
+                nodo.op,
+                nodo.op
+            )
+
+            return f"{izq} {op} {der}"
+
+
+        if tipo == "UnaryOp":
+
+            valor = self.generate_expr(
+                nodo.valor
+            )
+
+            if nodo.op == "no":
+
+                return f"not {valor}"
+
+            return f"{nodo.op}{valor}"
+
 
         if tipo == "Cadena":
             return repr(nodo.valor)
