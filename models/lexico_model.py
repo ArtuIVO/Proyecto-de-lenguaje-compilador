@@ -22,15 +22,11 @@ class Lexer:
         "para",
         "en",
         "rango",
-        "npc",
-        "hablar",
-        "mover",
-        "patrullar",
-        "atacar",
-        "vida",
-        "animar",
-        "esperar",
-        "ruta",
+        "entero", 
+        "decimal", 
+        "texto", 
+        "booleano", 
+        "lista",
     }
 
     OPERADORES = {

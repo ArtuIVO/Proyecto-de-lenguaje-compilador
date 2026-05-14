@@ -86,6 +86,19 @@ class Parser:
         if tok.valor == "para":
             return self.para_stmt()
 
+        TIPOS = {
+            "entero",
+            "decimal",
+            "texto",
+            "booleano",
+            "lista"
+        }
+
+        if tok.valor in TIPOS:
+            return self.declaracion_tipada()
+
+
+
         if tok.tipo == "IDENTIFICADOR":
              # 🔥 SI ES LLAMADA A FUNCIÓN
             if (
@@ -103,19 +116,41 @@ class Parser:
     # BLOQUES (INDENT / DEDENT)
 
     def bloque(self):
+
         sentencias = []
+
+        # ignorar líneas vacías
+        while (
+            self.actual()
+            and self.actual().tipo == "NEWLINE"
+        ):
+            self.avanzar()
 
         self.match("INDENT")
 
-        self.saltar_newlines()
+        while self.actual():
 
-        while self.actual() and self.actual().tipo != "DEDENT":
-            sentencias.append(self.sentencia())
-            self.saltar_newlines()
+            # ignorar líneas vacías internas
+            while (
+                self.actual()
+                and self.actual().tipo == "NEWLINE"
+            ):
+                self.avanzar()
+
+            if (
+                self.actual()
+                and self.actual().tipo == "DEDENT"
+            ):
+                break
+
+            sentencias.append(
+                self.sentencia()
+            )
 
         self.match("DEDENT")
 
         return sentencias
+
 
     # ---------------------
     # SENTENCIAS
@@ -128,7 +163,30 @@ class Parser:
         valor = self.expresion()
 
         return Asignacion(nombre, valor, tok.linea)
+    
+    def declaracion_tipada(self):
 
+        tipo_tok = self.match(
+            "PALABRA_RESERVADA"
+        )
+
+        tipo = tipo_tok.valor
+
+        nombre = self.match(
+            "IDENTIFICADOR"
+        ).valor
+
+        self.match("OPERADOR", "=")
+
+        valor = self.expresion()
+
+        return DeclaracionTipada(
+            tipo,
+            nombre,
+            valor,
+            tipo_tok.linea
+        )
+    
     def escribir(self):
         tok = self.match("PALABRA_RESERVADA", "escribir")
 

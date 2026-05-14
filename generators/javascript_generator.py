@@ -1,20 +1,10 @@
 
-class PythonGenerator:
+class JavaScriptGenerator:
 
     def __init__(self):
 
         self.code = []
         self.indent = 0
-
-    # =====================================================
-    # GENERAR
-    # =====================================================
-
-    def generate(self, nodo):
-
-        metodo = f"generate_{type(nodo).__name__}"
-
-        return getattr(self, metodo)(nodo)
 
     # =====================================================
     # HELPERS
@@ -31,6 +21,16 @@ class PythonGenerator:
         return "\n".join(self.code)
 
     # =====================================================
+    # GENERATE
+    # =====================================================
+
+    def generate(self, nodo):
+
+        metodo = f"generate_{type(nodo).__name__}"
+
+        return getattr(self, metodo)(nodo)
+
+    # =====================================================
     # PROGRAMA
     # =====================================================
 
@@ -45,44 +45,27 @@ class PythonGenerator:
 
     def generate_Asignacion(self, nodo):
 
-        valor = self.generate_expr(nodo.valor)
+        valor = self.generate_expr(
+            nodo.valor
+        )
 
         self.emit(
-            f"{nodo.nombre} = {valor}"
+            f"let {nodo.nombre} = {valor};"
         )
 
     # =====================================================
     # DECLARACIÓN TIPADA
     # =====================================================
-    
+
     def generate_DeclaracionTipada(self, nodo):
 
         valor = self.generate_expr(
             nodo.valor
         )
 
-        tipos_python = {
-
-            "entero": "int",
-
-            "decimal": "float",
-
-            "texto": "str",
-
-            "booleano": "bool",
-
-            "lista": "list"
-        }
-
-        tipo = tipos_python.get(
-            nodo.tipo,
-            "Any"
-        )
-
         self.emit(
-            f"{nodo.nombre}: {tipo} = {valor}"
+            f"let {nodo.nombre} = {valor};"
         )
-
 
     # =====================================================
     # ESCRIBIR
@@ -90,10 +73,12 @@ class PythonGenerator:
 
     def generate_Escribir(self, nodo):
 
-        valor = self.generate_expr(nodo.valor)
+        valor = self.generate_expr(
+            nodo.valor
+        )
 
         self.emit(
-            f"print({valor})"
+            f"console.log({valor});"
         )
 
     # =====================================================
@@ -107,7 +92,7 @@ class PythonGenerator:
         )
 
         self.emit(
-            f"if {condicion}:"
+            f"if ({condicion}) {{"
         )
 
         self.indent += 1
@@ -117,9 +102,11 @@ class PythonGenerator:
 
         self.indent -= 1
 
+        self.emit("}")
+
         if nodo.sino:
 
-            self.emit("else:")
+            self.emit("else {")
 
             self.indent += 1
 
@@ -127,6 +114,8 @@ class PythonGenerator:
                 self.generate(ins)
 
             self.indent -= 1
+
+            self.emit("}")
 
     # =====================================================
     # WHILE
@@ -139,7 +128,7 @@ class PythonGenerator:
         )
 
         self.emit(
-            f"while {condicion}:"
+            f"while ({condicion}) {{"
         )
 
         self.indent += 1
@@ -149,60 +138,7 @@ class PythonGenerator:
 
         self.indent -= 1
 
-    # =====================================================
-    # FUNCIÓN
-    # =====================================================
-
-    def generate_Funcion(self, nodo):
-
-        params = ", ".join(
-            nodo.parametros
-        )
-
-        self.emit(
-            f"def {nodo.nombre}({params}):"
-        )
-
-        self.indent += 1
-
-        for ins in nodo.cuerpo:
-            self.generate(ins)
-
-        self.indent -= 1
-
-    # =====================================================
-    # RETORNO
-    # =====================================================
-
-    def generate_Retornar(self, nodo):
-
-        valor = self.generate_expr(
-            nodo.valor
-        )
-
-        self.emit(
-            f"return {valor}"
-        )
-
-    # =====================================================
-    # LLAMADAS
-    # =====================================================
-
-    def generate_Llamada(self, nodo):
-
-        args = ", ".join([
-            self.generate_expr(a)
-            for a in nodo.argumentos
-        ])
-
-        # builtins
-        if nodo.nombre == "escribir":
-            self.emit(f"print({args})")
-            return
-
-        self.emit(
-            f"{nodo.nombre}({args})"
-        )
+        self.emit("}")
 
     # =====================================================
     # FOR
@@ -219,7 +155,9 @@ class PythonGenerator:
         )
 
         self.emit(
-            f"for {nodo.variable} in range({inicio}, {fin}):"
+            f"for (let {nodo.variable} = {inicio}; "
+            f"{nodo.variable} < {fin}; "
+            f"{nodo.variable}++) {{"
         )
 
         self.indent += 1
@@ -228,6 +166,60 @@ class PythonGenerator:
             self.generate(ins)
 
         self.indent -= 1
+
+        self.emit("}")
+
+    # =====================================================
+    # FUNCIÓN
+    # =====================================================
+
+    def generate_Funcion(self, nodo):
+
+        params = ", ".join(
+            nodo.parametros
+        )
+
+        self.emit(
+            f"function {nodo.nombre}({params}) {{"
+        )
+
+        self.indent += 1
+
+        for ins in nodo.cuerpo:
+            self.generate(ins)
+
+        self.indent -= 1
+
+        self.emit("}")
+
+    # =====================================================
+    # RETORNO
+    # =====================================================
+
+    def generate_Retornar(self, nodo):
+
+        valor = self.generate_expr(
+            nodo.valor
+        )
+
+        self.emit(
+            f"return {valor};"
+        )
+
+    # =====================================================
+    # LLAMADAS
+    # =====================================================
+
+    def generate_Llamada(self, nodo):
+
+        args = ", ".join([
+            self.generate_expr(a)
+            for a in nodo.argumentos
+        ])
+
+        self.emit(
+            f"{nodo.nombre}({args});"
+        )
 
     # =====================================================
     # EXPRESIONES
@@ -255,7 +247,6 @@ class PythonGenerator:
 
             return f"[{elementos}]"
 
-
         if tipo == "AccesoLista":
 
             indice = self.generate_expr(
@@ -263,8 +254,6 @@ class PythonGenerator:
             )
 
             return f"{nodo.nombre}[{indice}]"
-        
-
 
         if tipo == "BinOp":
 
@@ -285,19 +274,25 @@ class PythonGenerator:
                 for a in nodo.argumentos
             ])
 
-            # traducción builtins
             traducciones = {
-                "largo": "len",
-                "mayus": "str.upper",
-                "minus": "str.lower",
-                "tipo": "type",
+
+                "largo": ".length",
+
+                "mayus": ".toUpperCase",
+
+                "minus": ".toLowerCase"
             }
 
-            nombre = traducciones.get(
-                nodo.nombre,
-                nodo.nombre
-            )
+            if nodo.nombre == "largo":
+                return f"{args}.length"
 
-            return f"{nombre}({args})"
+            if nodo.nombre == "mayus":
+                return f"{args}.toUpperCase()"
 
-        return "None"
+            if nodo.nombre == "minus":
+                return f"{args}.toLowerCase()"
+
+            return f"{nodo.nombre}({args})"
+
+        return "null"
+

@@ -1,12 +1,14 @@
 
 from PyQt6.QtWidgets import QFileDialog
 
+from generators.javascript_generator import JavaScriptGenerator
 from models.lexico_model import Lexer
 from models.sintactico_model import Parser
 from models.semantico_model import AnalizadorSemantico
 from models.error import CompilerError
 from generators.python_generator import PythonGenerator
-
+from generators.javascript_generator import JavaScriptGenerator
+from generators.csharp_generator import CSharpGenerator
 
 class CompilerController:
 
@@ -38,6 +40,12 @@ class CompilerController:
         )
         self.window.action_exportar_python.triggered.connect(
             self.exportar_python
+        )
+        self.window.action_exportar_javascript.triggered.connect(
+            self.exportar_javascript
+        )
+        self.window.action_exportar_csharp.triggered.connect(
+            self.exportar_csharp
         )
     # =====================================================
     # IMPORTAR 
@@ -135,6 +143,224 @@ class CompilerController:
                 "detalle": str(e),
                 "solucion": "Error interno del exportador"
             })
+
+    # =====================================================
+    # EXPORTAR JAVASCRIPT
+    # =====================================================
+   
+    def exportar_javascript(self):
+
+        codigo = self.window.editor_panel.get_code()
+
+        if not codigo.strip():
+
+            self.window.statusBar().showMessage(
+                "No hay código para exportar"
+            )
+
+            return
+
+        try:
+
+            # =============================================
+            # LEXER
+            # =============================================
+
+            lexer = Lexer(codigo)
+
+            tokens, errores = lexer.analizar_con_errores()
+
+            if errores:
+
+                self.window.results_panel.show_error(
+                    errores[0]
+                )
+
+                return
+
+            # =============================================
+            # PARSER
+            # =============================================
+
+            parser = Parser(tokens)
+
+            ast = parser.parse()
+
+            # =============================================
+            # GENERATOR JS
+            # =============================================
+
+            generator = JavaScriptGenerator()
+
+            generator.generate(ast)
+
+            codigo_js = generator.get_code()
+
+            # =============================================
+            # GUARDAR ARCHIVO
+            # =============================================
+
+            file_path, _ = QFileDialog.getSaveFileName(
+                self.window,
+                "Exportar JavaScript",
+                "programa.js",
+                "JavaScript Files (*.js)"
+            )
+
+            if not file_path:
+                return
+
+            with open(
+                file_path,
+                "w",
+                encoding="utf-8"
+            ) as f:
+
+                f.write(codigo_js)
+
+            self.window.statusBar().showMessage(
+                f"JavaScript exportado: {file_path}"
+            )
+
+        except CompilerError as e:
+
+            self.window.results_panel.show_error({
+
+                "linea": e.linea,
+
+                "error": "Error exportando JavaScript",
+
+                "detalle": e.mensaje,
+
+                "solucion": (
+                    "Corrige el código "
+                    "antes de exportar"
+                )
+            })
+
+        except Exception as e:
+
+            self.window.results_panel.show_error({
+
+                "linea": 0,
+
+                "error": "Error crítico",
+
+                "detalle": str(e),
+
+                "solucion": (
+                    "Error interno del exportador"
+                )
+            })
+
+    # =====================================================
+    # EXPORTAR C#
+    # =====================================================
+    def exportar_csharp(self):
+
+        codigo = self.window.editor_panel.get_code()
+
+        if not codigo.strip():
+
+            self.window.statusBar().showMessage(
+                "No hay código para exportar"
+            )
+
+            return
+
+        try:
+
+            # =============================================
+            # LEXER
+            # =============================================
+
+            lexer = Lexer(codigo)
+
+            tokens, errores = lexer.analizar_con_errores()
+
+            if errores:
+
+                self.window.results_panel.show_error(
+                    errores[0]
+                )
+
+                return
+
+            # =============================================
+            # PARSER
+            # =============================================
+
+            parser = Parser(tokens)
+
+            ast = parser.parse()
+
+            # =============================================
+            # GENERATOR C#
+            # =============================================
+
+            generator = CSharpGenerator()
+
+            generator.generate(ast)
+
+            codigo_cs = generator.get_code()
+
+            # =============================================
+            # GUARDAR ARCHIVO
+            # =============================================
+
+            file_path, _ = QFileDialog.getSaveFileName(
+                self.window,
+                "Exportar C#",
+                "programa.cs",
+                "C# Files (*.cs)"
+            )
+
+            if not file_path:
+                return
+
+            with open(
+                file_path,
+                "w",
+                encoding="utf-8"
+            ) as f:
+
+                f.write(codigo_cs)
+
+            self.window.statusBar().showMessage(
+                f"C# exportado: {file_path}"
+            )
+
+        except CompilerError as e:
+
+            self.window.results_panel.show_error({
+
+                "linea": e.linea,
+
+                "error": "Error exportando C#",
+
+                "detalle": e.mensaje,
+
+                "solucion": (
+                    "Corrige el código "
+                    "antes de exportar"
+                )
+            })
+
+        except Exception as e:
+
+            self.window.results_panel.show_error({
+
+                "linea": 0,
+
+                "error": "Error crítico",
+
+                "detalle": str(e),
+
+                "solucion": (
+                    "Error interno del exportador"
+                )
+            })
+
 
 
     # =====================================================
@@ -234,17 +460,43 @@ class CompilerController:
             # GENERAR PYTHON
             # =================================================
 
-            generator = PythonGenerator()
+            python_generator = PythonGenerator()
 
-            generator.generate(ast)
+            python_generator.generate(ast)
 
-            codigo_python = generator.get_code()
+            codigo_python = python_generator.get_code()
 
             print("\n===== PYTHON GENERADO =====\n")
 
             print(codigo_python)
-            
 
+            # =================================================
+            # GENERAR JAVASCRIPT
+            # =================================================
+
+            js_generator = JavaScriptGenerator()
+
+            js_generator.generate(ast)
+
+            codigo_js = js_generator.get_code()
+
+            print("\n===== JAVASCRIPT GENERADO =====\n")
+
+            print(codigo_js)
+
+            # =================================================
+            # GENERAR C#
+            # =================================================
+
+            cs_generator = CSharpGenerator()
+
+            cs_generator.generate(ast)
+
+            codigo_cs = cs_generator.get_code()
+
+            print("\n===== C# GENERADO =====\n")
+
+            print(codigo_cs)
 
             # =================================================
             # RESULTADOS

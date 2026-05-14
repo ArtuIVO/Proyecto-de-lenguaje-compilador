@@ -15,6 +15,24 @@ class Asignacion(Nodo):
         self.nombre = nombre
         self.valor = valor
 
+class DeclaracionTipada(Nodo):
+
+    def __init__(
+        self,
+        tipo,
+        nombre,
+        valor,
+        linea=0
+    ):
+
+        super().__init__(linea)
+
+        self.tipo = tipo
+        self.nombre = nombre
+        self.valor = valor
+
+
+
 
 class If(Nodo):
     def __init__(self, condicion, cuerpo, sino=None, linea=0):

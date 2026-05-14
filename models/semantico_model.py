@@ -1,6 +1,21 @@
 from models.error import CompilerError
 from models.builtins import Builtins
 
+TIPOS_EDULANG = {
+
+    "entero": int,
+
+    "decimal": float,
+
+    "texto": str,
+
+    "booleano": bool,
+
+    "lista": list,
+}
+
+
+
 class Simbolo:
     def __init__(self, nombre, tipo, valor, linea, scope="global"):
         self.nombre = nombre
@@ -85,6 +100,64 @@ class AnalizadorSemantico:
             "valido": True
         })
     # ----------------------
+
+    def visitar_DeclaracionTipada(self, nodo):
+
+        valor = self.analizar(nodo.valor)
+
+        tipo_python = TIPOS_EDULANG.get(
+            nodo.tipo
+        )
+
+        if tipo_python is None:
+
+            raise CompilerError(
+                f"Tipo desconocido: {nodo.tipo}",
+                nodo.linea
+            )
+
+        # ============================================
+        # VALIDACIÓN DE TIPO
+        # ============================================
+
+        if not isinstance(valor, tipo_python):
+
+            raise CompilerError(
+                (
+                    f"Se esperaba tipo "
+                    f"'{nodo.tipo}' "
+                    f"pero se recibió "
+                    f"'{type(valor).__name__}'"
+                ),
+                nodo.linea
+            )
+
+        # ============================================
+        # GUARDAR VARIABLE
+        # ============================================
+
+        self.scopes[-1][nodo.nombre] = Simbolo(
+            nodo.nombre,
+            nodo.tipo,
+            valor,
+            nodo.linea
+        )
+
+        self.traza.append({
+
+            "linea": nodo.linea,
+
+            "accion": (
+                f"Declaración tipada "
+                f"'{nodo.nombre}'"
+            ),
+
+            "valor": valor,
+
+            "valido": True
+        })
+
+
 
     def visitar_Escribir(self, nodo):
         valor = self.analizar(nodo.valor)

@@ -1,5 +1,5 @@
 
-class PythonGenerator:
+class CSharpGenerator:
 
     def __init__(self):
 
@@ -7,20 +7,10 @@ class PythonGenerator:
         self.indent = 0
 
     # =====================================================
-    # GENERAR
-    # =====================================================
-
-    def generate(self, nodo):
-
-        metodo = f"generate_{type(nodo).__name__}"
-
-        return getattr(self, metodo)(nodo)
-
-    # =====================================================
     # HELPERS
     # =====================================================
 
-    def emit(self, linea):
+    def emit(self, linea=""):
 
         self.code.append(
             "    " * self.indent + linea
@@ -31,13 +21,56 @@ class PythonGenerator:
         return "\n".join(self.code)
 
     # =====================================================
+    # GENERATE
+    # =====================================================
+
+    def generate(self, nodo):
+
+        # encabezado C#
+        self.emit("using System;")
+        self.emit()
+
+        self.emit("class Program")
+        self.emit("{")
+
+        self.indent += 1
+
+        self.emit("static void Main()")
+        self.emit("{")
+
+        self.indent += 1
+
+        # generar programa
+        metodo = f"generate_{type(nodo).__name__}"
+
+        getattr(self, metodo)(nodo)
+
+        self.indent -= 1
+
+        self.emit("}")
+
+        self.indent -= 1
+
+        self.emit("}")
+
+    # =====================================================
     # PROGRAMA
     # =====================================================
 
     def generate_Programa(self, nodo):
 
         for sentencia in nodo.sentencias:
-            self.generate(sentencia)
+            self.generate_statement(sentencia)
+
+    # =====================================================
+    # STATEMENTS
+    # =====================================================
+
+    def generate_statement(self, nodo):
+
+        metodo = f"generate_{type(nodo).__name__}"
+
+        return getattr(self, metodo)(nodo)
 
     # =====================================================
     # ASIGNACIÓN
@@ -45,44 +78,45 @@ class PythonGenerator:
 
     def generate_Asignacion(self, nodo):
 
-        valor = self.generate_expr(nodo.valor)
+        valor = self.generate_expr(
+            nodo.valor
+        )
 
         self.emit(
-            f"{nodo.nombre} = {valor}"
+            f"var {nodo.nombre} = {valor};"
         )
 
     # =====================================================
     # DECLARACIÓN TIPADA
     # =====================================================
-    
+
     def generate_DeclaracionTipada(self, nodo):
 
         valor = self.generate_expr(
             nodo.valor
         )
 
-        tipos_python = {
+        tipos = {
 
             "entero": "int",
 
-            "decimal": "float",
+            "decimal": "double",
 
-            "texto": "str",
+            "texto": "string",
 
             "booleano": "bool",
 
-            "lista": "list"
+            "lista": "var"
         }
 
-        tipo = tipos_python.get(
+        tipo = tipos.get(
             nodo.tipo,
-            "Any"
+            "var"
         )
 
         self.emit(
-            f"{nodo.nombre}: {tipo} = {valor}"
+            f"{tipo} {nodo.nombre} = {valor};"
         )
-
 
     # =====================================================
     # ESCRIBIR
@@ -90,10 +124,12 @@ class PythonGenerator:
 
     def generate_Escribir(self, nodo):
 
-        valor = self.generate_expr(nodo.valor)
+        valor = self.generate_expr(
+            nodo.valor
+        )
 
         self.emit(
-            f"print({valor})"
+            f"Console.WriteLine({valor});"
         )
 
     # =====================================================
@@ -107,26 +143,33 @@ class PythonGenerator:
         )
 
         self.emit(
-            f"if {condicion}:"
+            f"if ({condicion})"
         )
+
+        self.emit("{")
 
         self.indent += 1
 
         for ins in nodo.cuerpo:
-            self.generate(ins)
+            self.generate_statement(ins)
 
         self.indent -= 1
 
+        self.emit("}")
+
         if nodo.sino:
 
-            self.emit("else:")
+            self.emit("else")
+            self.emit("{")
 
             self.indent += 1
 
             for ins in nodo.sino:
-                self.generate(ins)
+                self.generate_statement(ins)
 
             self.indent -= 1
+
+            self.emit("}")
 
     # =====================================================
     # WHILE
@@ -139,70 +182,19 @@ class PythonGenerator:
         )
 
         self.emit(
-            f"while {condicion}:"
+            f"while ({condicion})"
         )
+
+        self.emit("{")
 
         self.indent += 1
 
         for ins in nodo.cuerpo:
-            self.generate(ins)
+            self.generate_statement(ins)
 
         self.indent -= 1
 
-    # =====================================================
-    # FUNCIÓN
-    # =====================================================
-
-    def generate_Funcion(self, nodo):
-
-        params = ", ".join(
-            nodo.parametros
-        )
-
-        self.emit(
-            f"def {nodo.nombre}({params}):"
-        )
-
-        self.indent += 1
-
-        for ins in nodo.cuerpo:
-            self.generate(ins)
-
-        self.indent -= 1
-
-    # =====================================================
-    # RETORNO
-    # =====================================================
-
-    def generate_Retornar(self, nodo):
-
-        valor = self.generate_expr(
-            nodo.valor
-        )
-
-        self.emit(
-            f"return {valor}"
-        )
-
-    # =====================================================
-    # LLAMADAS
-    # =====================================================
-
-    def generate_Llamada(self, nodo):
-
-        args = ", ".join([
-            self.generate_expr(a)
-            for a in nodo.argumentos
-        ])
-
-        # builtins
-        if nodo.nombre == "escribir":
-            self.emit(f"print({args})")
-            return
-
-        self.emit(
-            f"{nodo.nombre}({args})"
-        )
+        self.emit("}")
 
     # =====================================================
     # FOR
@@ -219,15 +211,76 @@ class PythonGenerator:
         )
 
         self.emit(
-            f"for {nodo.variable} in range({inicio}, {fin}):"
+            f"for (int {nodo.variable} = {inicio}; "
+            f"{nodo.variable} < {fin}; "
+            f"{nodo.variable}++)"
         )
+
+        self.emit("{")
 
         self.indent += 1
 
         for ins in nodo.cuerpo:
-            self.generate(ins)
+            self.generate_statement(ins)
 
         self.indent -= 1
+
+        self.emit("}")
+
+    # =====================================================
+    # RETORNO
+    # =====================================================
+
+    def generate_Retornar(self, nodo):
+
+        valor = self.generate_expr(
+            nodo.valor
+        )
+
+        self.emit(
+            f"return {valor};"
+        )
+
+    # =====================================================
+    # FUNCIONES
+    # =====================================================
+
+    def generate_Funcion(self, nodo):
+
+        params = ", ".join([
+            f"dynamic {p}"
+            for p in nodo.parametros
+        ])
+
+        self.emit(
+            f"static dynamic {nodo.nombre}({params})"
+        )
+
+        self.emit("{")
+
+        self.indent += 1
+
+        for ins in nodo.cuerpo:
+            self.generate_statement(ins)
+
+        self.indent -= 1
+
+        self.emit("}")
+
+    # =====================================================
+    # LLAMADAS
+    # =====================================================
+
+    def generate_Llamada(self, nodo):
+
+        args = ", ".join([
+            self.generate_expr(a)
+            for a in nodo.argumentos
+        ])
+
+        self.emit(
+            f"{nodo.nombre}({args});"
+        )
 
     # =====================================================
     # EXPRESIONES
@@ -241,7 +294,7 @@ class PythonGenerator:
             return str(nodo.valor)
 
         if tipo == "Cadena":
-            return repr(nodo.valor)
+            return f'"{nodo.valor}"'
 
         if tipo == "Identificador":
             return nodo.nombre
@@ -253,8 +306,7 @@ class PythonGenerator:
                 for x in nodo.elementos
             ])
 
-            return f"[{elementos}]"
-
+            return f"new[] {{ {elementos} }}"
 
         if tipo == "AccesoLista":
 
@@ -263,8 +315,6 @@ class PythonGenerator:
             )
 
             return f"{nodo.nombre}[{indice}]"
-        
-
 
         if tipo == "BinOp":
 
@@ -285,19 +335,15 @@ class PythonGenerator:
                 for a in nodo.argumentos
             ])
 
-            # traducción builtins
-            traducciones = {
-                "largo": "len",
-                "mayus": "str.upper",
-                "minus": "str.lower",
-                "tipo": "type",
-            }
+            if nodo.nombre == "largo":
+                return f"{args}.Length"
 
-            nombre = traducciones.get(
-                nodo.nombre,
-                nodo.nombre
-            )
+            if nodo.nombre == "mayus":
+                return f"{args}.ToUpper()"
 
-            return f"{nombre}({args})"
+            if nodo.nombre == "minus":
+                return f"{args}.ToLower()"
 
-        return "None"
+            return f"{nodo.nombre}({args})"
+
+        return "null"
