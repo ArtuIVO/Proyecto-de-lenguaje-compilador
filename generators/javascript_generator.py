@@ -2,7 +2,7 @@
 class JavaScriptGenerator:
 
     def __init__(self):
-
+        self.variables = set()
         self.code = []
         self.indent = 0
 
@@ -28,6 +28,12 @@ class JavaScriptGenerator:
 
         metodo = f"generate_{type(nodo).__name__}"
 
+        if not hasattr(self, metodo):
+            raise Exception(
+                f"Generator no soporta: "
+                f"{type(nodo).__name__}"
+            )
+
         return getattr(self, metodo)(nodo)
 
     # =====================================================
@@ -43,29 +49,58 @@ class JavaScriptGenerator:
     # ASIGNACIÓN
     # =====================================================
 
+    
     def generate_Asignacion(self, nodo):
 
         valor = self.generate_expr(
             nodo.valor
         )
 
-        self.emit(
-            f"let {nodo.nombre} = {valor};"
-        )
+        if nodo.nombre not in self.variables:
+
+            self.variables.add(
+                nodo.nombre
+            )
+
+            self.emit(
+                f"let {nodo.nombre} = {valor};"
+            )
+
+        else:
+
+            self.emit(
+                f"{nodo.nombre} = {valor};"
+            )
+
+
 
     # =====================================================
     # DECLARACIÓN TIPADA
     # =====================================================
 
+    
     def generate_DeclaracionTipada(self, nodo):
 
         valor = self.generate_expr(
             nodo.valor
         )
 
-        self.emit(
-            f"let {nodo.nombre} = {valor};"
-        )
+        if nodo.nombre not in self.variables:
+
+            self.variables.add(
+                nodo.nombre
+            )
+
+            self.emit(
+                f"let {nodo.nombre} = {valor};"
+            )
+
+        else:
+
+            self.emit(
+                f"{nodo.nombre} = {valor};"
+            )
+
 
     # =====================================================
     # ESCRIBIR
@@ -234,6 +269,45 @@ class JavaScriptGenerator:
         self.emit(
             f"{nodo.nombre}({args});"
         )
+    # =====================================================
+    # DICCIONARIO
+    # =====================================================
+    def generate_Diccionario(self, nodo):
+
+        pares = []
+
+        for clave, valor in nodo.pares:
+
+            clave_gen = self.generate_expr(
+                clave
+            )
+
+            valor_gen = self.generate_expr(
+                valor
+            )
+
+            pares.append(
+                f"{clave_gen}: {valor_gen}"
+            )
+
+        return "{ " + ", ".join(pares) + " }"
+
+    # =====================================================
+    # ACCESO
+    # =====================================================
+    def generate_Acceso(self, nodo):
+
+        objeto = self.generate_expr(
+            nodo.objeto
+        )
+
+        indice = self.generate_expr(
+            nodo.indice
+        )
+
+        return f"{objeto}[{indice}]"
+
+
 
     # =====================================================
     # EXPRESIONES
@@ -306,13 +380,19 @@ class JavaScriptGenerator:
 
             return f"[{elementos}]"
 
-        if tipo == "AccesoLista":
 
-            indice = self.generate_expr(
-                nodo.indice
+        if tipo == "Diccionario":
+
+            return self.generate_Diccionario(
+                nodo
             )
 
-            return f"{nodo.nombre}[{indice}]"
+        if tipo == "Acceso":
+
+            return self.generate_Acceso(
+                nodo
+            )
+
 
         if tipo == "BinOp":
 
@@ -327,31 +407,37 @@ class JavaScriptGenerator:
             return f"{izq} {nodo.op} {der}"
 
         if tipo == "Llamada":
+             args = ", ".join([
+            self.generate_expr(a)
+            for a in nodo.argumentos
+        ])
 
-            args = ", ".join([
-                self.generate_expr(a)
-                for a in nodo.argumentos
-            ])
+        if nodo.nombre == "tipo":
+            return f"typeof({args})"
 
-            traducciones = {
+        if nodo.nombre == "agregar":
 
-                "largo": ".length",
+            lista = self.generate_expr(
+                nodo.argumentos[0]
+            )
 
-                "mayus": ".toUpperCase",
+            valor = self.generate_expr(
+                nodo.argumentos[1]
+            )
 
-                "minus": ".toLowerCase"
-            }
+            return f"{lista}.push({valor})"
 
-            if nodo.nombre == "largo":
-                return f"{args}.length"
+        if nodo.nombre == "largo":
+            return f"{args}.length"
 
-            if nodo.nombre == "mayus":
-                return f"{args}.toUpperCase()"
+        if nodo.nombre == "mayus":
+            return f"{args}.toUpperCase()"
 
-            if nodo.nombre == "minus":
-                return f"{args}.toLowerCase()"
+        if nodo.nombre == "minus":
+            return f"{args}.toLowerCase()"
 
-            return f"{nodo.nombre}({args})"
+        if nodo.nombre == "ordenar":
+            return f"{args}.sort()"
 
-        return "null"
+        return f"{nodo.nombre}({args})"
 

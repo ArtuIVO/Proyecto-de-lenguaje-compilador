@@ -1,6 +1,7 @@
 from models.ast_nodes import *
 from models.error import CompilerError
 
+
 class Parser:
 
     def __init__(self, tokens):
@@ -46,7 +47,7 @@ class Parser:
         raise CompilerError("Sintaxis inválida", linea)
 
     def saltar_newlines(self):
-        while self.actual() and self.actual().tipo == "NEWLINE":
+        while self.actual() and self.actual().tipo == "NEWLINE": #type: ignore
             self.avanzar()
 
     # ---------------------
@@ -67,43 +68,36 @@ class Parser:
     def sentencia(self):
         tok = self.actual()
 
-        if tok.valor == "funcion":
+        if tok.valor == "funcion": #type: ignore
             return self.funcion_stmt()
 
-        if tok.valor == "retornar":
+        if tok.valor == "retornar": #type: ignore
             return self.retornar_stmt()
 
-        if tok.valor == "escribir":
+        if tok.valor == "escribir": #type: ignore
             return self.escribir()
 
-        if tok.valor == "si":
+        if tok.valor == "si": #type: ignore
             return self.if_stmt()
 
-        if tok.valor == "mientras":
+        if tok.valor == "mientras": #type: ignore
             return self.while_stmt()
 
-        if tok.valor == "para":
+        if tok.valor == "para": #type: ignore
             return self.para_stmt()
 
-        if tok.valor == "romper":
+        if tok.valor == "romper": #type: ignore
 
             self.avanzar()
 
-            return Romper(tok.linea)
+            return Romper(tok.linea)#type: ignore
 
 
-        if tok.valor == "continuar":
-
-            self.avanzar()
-
-            return Continuar(tok.linea)
-
-
-        if tok.valor == "nulo":
+        if tok.valor == "continuar": #type: ignore
 
             self.avanzar()
 
-            return Nulo(tok.linea)
+            return Continuar(tok.linea) #type: ignore
 
         TIPOS = {
             "entero",
@@ -113,20 +107,20 @@ class Parser:
             "lista"
         }
 
-        if tok.valor in TIPOS:
+        if tok.valor in TIPOS: #type: ignore
             return self.declaracion_tipada()
 
 
 
-        if tok.tipo == "IDENTIFICADOR":
-             # 🔥 SI ES LLAMADA A FUNCIÓN
+        if tok.tipo == "IDENTIFICADOR": #type: ignore
+             # SI ES LLAMADA A FUNCIÓN
             if (
                 self.pos + 1 < len(self.tokens)
                 and self.tokens[self.pos + 1].valor == "("
             ):
-                return self.llamada()
+                return self.expresion()
 
-            # 🔥 SI NO → ASIGNACIÓN
+            # SI NO → ASIGNACIÓN
             return self.asignacion()
 
         raise CompilerError("Sentencia inválida", tok.linea if tok else 0)
@@ -141,7 +135,7 @@ class Parser:
         # ignorar líneas vacías
         while (
             self.actual()
-            and self.actual().tipo == "NEWLINE"
+            and self.actual().tipo == "NEWLINE" #type: ignore
         ):
             self.avanzar()
 
@@ -152,13 +146,13 @@ class Parser:
             # ignorar líneas vacías internas
             while (
                 self.actual()
-                and self.actual().tipo == "NEWLINE"
+                and self.actual().tipo == "NEWLINE" #type: ignore
             ):
                 self.avanzar()
 
             if (
                 self.actual()
-                and self.actual().tipo == "DEDENT"
+                and self.actual().tipo == "DEDENT" #type: ignore
             ):
                 break
 
@@ -226,10 +220,10 @@ class Parser:
 
         parametros = []
 
-        if self.actual().tipo == "IDENTIFICADOR":
+        if self.actual().tipo == "IDENTIFICADOR": #type: ignore
             parametros.append(self.match("IDENTIFICADOR").valor)
 
-            while self.actual().valor == ",":
+            while self.actual().valor == ",": #type: ignore
                 self.match("SIMBOLO", ",")
                 parametros.append(self.match("IDENTIFICADOR").valor)
 
@@ -262,7 +256,7 @@ class Parser:
 
         self.saltar_newlines()
 
-        if self.actual() and self.actual().valor == "sino":
+        if self.actual() and self.actual().valor == "sino": #type: ignore
             self.match("PALABRA_RESERVADA", "sino")
             self.match("SIMBOLO", ":")
             self.match("NEWLINE")
@@ -323,7 +317,7 @@ class Parser:
 
         while (
             self.actual()
-            and self.actual().valor in [
+            and self.actual().valor in [ #type: ignore
                 "y",
                 "o"
             ]
@@ -337,9 +331,9 @@ class Parser:
 
             nodo = LogicalOp(
                 nodo,
-                op.valor,
+                op.valor, #type: ignore
                 derecho,
-                op.linea
+                op.linea #type: ignore
             )
 
         return nodo
@@ -347,7 +341,7 @@ class Parser:
     def comparacion(self):
         nodo = self.aritmetica()
 
-        while self.actual() and self.actual().valor in (
+        while self.actual() and self.actual().valor in ( #type: ignore
             "==", "!=", "<", ">", "<=", ">="
         ):
             op = self.match("OPERADOR")
@@ -359,7 +353,7 @@ class Parser:
     def aritmetica(self):
         nodo = self.termino()
 
-        while self.actual() and self.actual().valor in ("+", "-"):
+        while self.actual() and self.actual().valor in ("+", "-"): #type: ignore
             op = self.match("OPERADOR")
             derecho = self.termino()
             nodo = BinOp(nodo, op.valor, derecho, op.linea)
@@ -369,7 +363,7 @@ class Parser:
     def termino(self):
         nodo = self.factor()
 
-        while self.actual() and self.actual().valor in ("*", "/"):
+        while self.actual() and self.actual().valor in ("*", "/"): #type: ignore
             op = self.match("OPERADOR")
             derecho = self.factor()
             nodo = BinOp(nodo, op.valor, derecho, op.linea)
@@ -381,54 +375,89 @@ class Parser:
     def factor(self):
         tok = self.actual()
 
-        if tok.valor in ("+","-","no"):
-            self.avanzar()
+        if tok.valor in ("+","-","no"): #type: ignore
+            self.avanzar() 
             valor = self.factor()
-            return UnaryOp(tok.valor, valor, tok.linea)
+            return UnaryOp(tok.valor, valor, tok.linea) #type: ignore
         
-        if (tok.tipo == "PALABRA_RESERVADA" and tok.valor == "nulo"):
+        if (tok.tipo == "PALABRA_RESERVADA" and tok.valor == "nulo"): #type: ignore
             self.avanzar()
-            return Nulo(tok.linea)
+            return Nulo(tok.linea) #type: ignore
         
-        if tok.tipo == "NUMERO":
+        if tok.tipo == "NUMERO": #type: ignore
             self.avanzar()
-            return Numero(tok.valor, tok.linea)
+            return Numero(tok.valor, tok.linea) #type: ignore
 
-        if tok.tipo == "STRING":
+        if tok.tipo == "STRING": #type: ignore
             self.avanzar()
-            return Cadena(tok.valor, tok.linea)
+            return Cadena(tok.valor, tok.linea) #type: ignore
 
-        if tok.valor == "[":
+        if tok.valor == "[": #type: ignore
             return self.lista_literal()
-        
+  
+        if tok.valor == "{": #type: ignore
+
+            return self.diccionario()
+
         if (
-            tok.tipo == "PALABRA_RESERVADA"
-            and tok.valor in ("verdadero", "falso")
+            tok.tipo == "PALABRA_RESERVADA" #type: ignore
+            and tok.valor in ("verdadero", "falso") #type: ignore
         ):
             self.avanzar()
-            return Booleano(tok.valor == "verdadero", tok.linea)
+            return Booleano(tok.valor == "verdadero", tok.linea) #type: ignore
         
 
-        if tok.tipo == "IDENTIFICADOR":
-
-            # acceso lista
-            if (
-                self.pos + 1 < len(self.tokens)
-                and self.tokens[self.pos + 1].valor == "["
-            ):
-                return self.acceso_lista()
-
-            # llamada función
-            if (
-                self.pos + 1 < len(self.tokens)
-                and self.tokens[self.pos + 1].valor == "("
-            ):
-                return self.llamada()
+       
+        if tok.tipo == "IDENTIFICADOR": #type: ignore
 
             self.avanzar()
-            return Identificador(tok.valor, tok.linea)
 
-        if tok.valor == "(":
+            nodo = Identificador(
+                tok.valor, #type: ignore
+                tok.linea #type: ignore
+            )
+
+            while self.actual():
+
+                # ========================================
+                # LLAMADA
+                # ========================================
+
+                if self.actual().valor == "(": #type: ignore
+
+                    nodo = self.llamada_desde(
+                        nodo
+                    )
+
+                # ========================================
+                # ACCESO []
+                # ========================================
+
+                elif self.actual().valor == "[": #type: ignore
+
+                    self.avanzar()
+
+                    indice = self.expresion()
+
+                    self.match(
+                        "SIMBOLO",
+                        "]"
+                    )
+
+                    nodo = Acceso(
+                        nodo,
+                        indice,
+                        tok.linea #type: ignore
+                    )
+
+                else:
+
+                    break
+
+            return nodo
+
+
+        if tok.valor == "(": #type: ignore
             self.match("SIMBOLO", "(")
             expr = self.expresion()
             self.match("SIMBOLO", ")")
@@ -438,53 +467,154 @@ class Parser:
 
     # ---------------------
 
-    def llamada(self):
-        tok = self.match("IDENTIFICADOR")
-        nombre = tok.valor
+    def llamada_desde(self, nodo_base):
 
-        self.match("SIMBOLO", "(")
+        self.match(
+            "SIMBOLO",
+            "("
+        )
 
-        args = []
+        argumentos = []
 
-        if self.actual().valor != ")":
-            args.append(self.expresion())
+        while (
+            self.actual()
+            and self.actual().valor != ")" #type: ignore
+        ):
 
-            while self.actual().valor == ",":
-                self.match("SIMBOLO", ",")
-                args.append(self.expresion())
+            argumentos.append(
+                self.expresion()
+            )
 
-        self.match("SIMBOLO", ")")
+            if (
+                self.actual()
+                and self.actual().valor == "," #type: ignore
+            ):
 
-        return Llamada(nombre, args, tok.linea)
+                self.avanzar()
+
+        self.match(
+            "SIMBOLO",
+            ")"
+        )
+
+        return Llamada(
+            nodo_base.nombre,
+            argumentos,
+            nodo_base.linea
+        )
+
+
+    def diccionario(self):
+
+        pares = []
+
+        llave = self.match(
+            "SIMBOLO",
+            "{"
+        )
+
+        while (
+            self.actual()
+            and self.actual().valor != "}" #type: ignore
+        ):
+            while (
+                self.actual()
+                and self.actual().tipo == "NEWLINE" # type: ignore
+            ):
+                self.avanzar()
+
+
+
+            # ============================================
+            # CLAVE
+            # ============================================
+
+            clave = self.expresion()
+
+            # ============================================
+            # :
+            # ============================================
+
+            self.match(
+                "SIMBOLO",
+                ":"
+            )
+
+            # ============================================
+            # VALOR
+            # ============================================
+
+            valor = self.expresion()
+
+            pares.append(
+                (clave, valor)
+            )
+
+            # ============================================
+            # ,
+            # ============================================
+
+            if (
+                self.actual()
+                and self.actual().valor == "," #type: ignore
+            ):
+
+                self.avanzar()
+                while (
+                    self.actual()
+                    and self.actual().tipo == "NEWLINE" # type: ignore
+                ):
+                    self.avanzar()
+                
+
+
+        self.match(
+            "SIMBOLO",
+            "}"
+        )
+
+        return Diccionario(
+            pares,
+            llave.linea
+        )
+
 
     # ---------------------
-
     def lista_literal(self):
+
         tok = self.match("SIMBOLO", "[")
 
         elementos = []
 
-        if self.actual().valor != "]":
-            elementos.append(self.expresion())
+        while (
+            self.actual()
+            and self.actual().tipo == "NEWLINE" # type: ignore
+        ):
+            self.avanzar()
 
-            while self.actual().valor == ",":
+        if self.actual().valor != "]": # type: ignore
+
+            elementos.append(
+                self.expresion()
+            )
+
+            while self.actual().valor == ",": # type: ignore
+
                 self.match("SIMBOLO", ",")
-                elementos.append(self.expresion())
+
+                while (
+                    self.actual()
+                    and self.actual().tipo == "NEWLINE" # type: ignore
+                ):
+                    self.avanzar()
+
+                elementos.append(
+                    self.expresion()
+                )
 
         self.match("SIMBOLO", "]")
 
-        return Lista(elementos, tok.linea)
-
-    # ---------------------
-
-    def acceso_lista(self):
-        tok = self.match("IDENTIFICADOR")
-        nombre = tok.valor
-
-        self.match("SIMBOLO", "[")
-
-        indice = self.expresion()
-
-        self.match("SIMBOLO", "]")
-
-        return AccesoLista(nombre, indice, tok.linea)
+        return Lista(
+            elementos,
+            tok.linea
+        )

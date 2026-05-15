@@ -49,7 +49,16 @@ class AnalizadorSemantico:
 
     def analizar(self, nodo):
         metodo = f"visitar_{type(nodo).__name__}"
+        if not hasattr(self, metodo):
+
+            raise CompilerError(
+                f"Nodo no soportado: "
+                f"{type(nodo).__name__}",
+                nodo.linea
+            )
+
         return getattr(self, metodo)(nodo)
+
 
     # ----------------------
 
@@ -60,7 +69,14 @@ class AnalizadorSemantico:
     # ----------------------
 
     def visitar_Numero(self, nodo):
+
+        if "." in str(nodo.valor):
+
+            return float(nodo.valor)
+
         return int(nodo.valor)
+
+
     
     def visitar_Booleano(self, nodo):
         return nodo.valor
@@ -191,6 +207,8 @@ class AnalizadorSemantico:
     
     def visitar_Llamada(self, nodo):
 
+        
+
         # =====================================================
         # BUILTINS OFICIALES
         # =====================================================
@@ -236,6 +254,21 @@ class AnalizadorSemantico:
             )
 
         funcion = self.funciones[nodo.nombre]
+        if len(nodo.argumentos) != len(funcion.parametros):
+
+            raise CompilerError(
+
+                (
+                    f"La función '{nodo.nombre}' "
+                    f"espera "
+                    f"{len(funcion.parametros)} "
+                    f"argumentos"
+                ),
+
+                nodo.linea
+            )
+
+
 
         # nuevo scope
         self.scopes.append({})
@@ -386,45 +419,77 @@ class AnalizadorSemantico:
    
 
     # ----------------------
-    # 🔥 LISTAS
+    # LISTAS
 
     def visitar_Lista(self, nodo):
         return [self.analizar(x) for x in nodo.elementos]
 
-    def visitar_AccesoLista(self, nodo):
+    # ----------------------
+    # DICCIONARIO
+    def visitar_Diccionario(self, nodo):
 
-        for scope in reversed(self.scopes):
-            if nodo.nombre in scope:
-                lista = scope[nodo.nombre].valor
-                indice = self.analizar(nodo.indice)
+        resultado = {}
 
-                try:
-                    return lista[indice]
-                except Exception:
-                    raise CompilerError(
-                        "Índice fuera de rango",
-                        nodo.linea
-                    )
+        for clave, valor in nodo.pares:
 
-        raise CompilerError(
-            f"Variable no definida: {nodo.nombre}",
-            nodo.linea
+            clave_eval = self.analizar(
+                clave
+            )
+
+            valor_eval = self.analizar(
+                valor
+            )
+
+            resultado[
+                clave_eval
+            ] = valor_eval
+
+        return resultado
+
+    # -------------------------
+    # ACCESO
+    def visitar_Acceso(self, nodo):
+
+        objeto = self.analizar(
+            nodo.objeto
         )
+
+        indice = self.analizar(
+            nodo.indice
+        )
+
+        try:
+
+            return objeto[indice]
+
+        except Exception:
+
+            raise CompilerError(
+                "Acceso inválido",
+                nodo.linea
+            )
+
+
+
     # ----------------------
     # 🔥 OPERACIONES
 
     def visitar_BinOp(self, nodo):
         izq = self.analizar(nodo.izquierda)
         der = self.analizar(nodo.derecha)
-
-        if type(izq) != type(der):
-            raise CompilerError(
-                f"Tipos incompatibles: {type(izq).__name__} y {type(der).__name__}",
-                nodo.linea
+        tipos_numericos = (int, float)
+        if (
+            type(izq) != type(der)
+            and not (
+                isinstance(izq, tipos_numericos) 
+                and isinstance(der, tipos_numericos) 
             )
-
-        izq = self.analizar(nodo.izquierda)
-        der = self.analizar(nodo.derecha)
+        ):
+            raise CompilerError( f"Tipos incompatibles: " 
+                                f"{type(izq).__name__} " 
+                                f"y " 
+                                f"{type(der).__name__}", nodo.linea 
+                                )
 
         if nodo.op == "+":
             return izq + der

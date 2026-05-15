@@ -1,3 +1,4 @@
+
 class Token:
     def __init__(self, tipo, valor, linea=1):
         self.tipo = tipo
@@ -48,6 +49,7 @@ class Lexer:
     SIMBOLOS = {
         "(", ")",
         "[", "]",
+        "{", "}",
         ":",
         ","
     }
@@ -149,7 +151,7 @@ class Lexer:
 
                 inicio = self.pos
 
-                while (self.actual() and (self.actual().isalnum() or self.actual() == "_")
+                while (self.actual() and (self.actual().isalnum() or self.actual() == "_") # type: ignore
                         ): # type: ignore
                     self.avanzar()
 

@@ -2,7 +2,7 @@
 class CSharpGenerator:
 
     def __init__(self):
-
+        self.variables = set()
         self.code = []
         self.indent = 0
 
@@ -26,8 +26,8 @@ class CSharpGenerator:
 
     def generate(self, nodo):
 
-        # encabezado C#
         self.emit("using System;")
+        self.emit("using System.Collections.Generic;")
         self.emit()
 
         self.emit("class Program")
@@ -40,10 +40,7 @@ class CSharpGenerator:
 
         self.indent += 1
 
-        # generar programa
-        metodo = f"generate_{type(nodo).__name__}"
-
-        getattr(self, metodo)(nodo)
+        self.generate_statement(nodo)
 
         self.indent -= 1
 
@@ -52,7 +49,6 @@ class CSharpGenerator:
         self.indent -= 1
 
         self.emit("}")
-
     # =====================================================
     # PROGRAMA
     # =====================================================
@@ -70,6 +66,13 @@ class CSharpGenerator:
 
         metodo = f"generate_{type(nodo).__name__}"
 
+        if not hasattr(self, metodo):
+
+            raise Exception(
+                f"CSharpGenerator no soporta: "
+                f"{type(nodo).__name__}"
+            )
+
         return getattr(self, metodo)(nodo)
 
     # =====================================================
@@ -82,14 +85,27 @@ class CSharpGenerator:
             nodo.valor
         )
 
-        self.emit(
-            f"var {nodo.nombre} = {valor};"
-        )
+        if nodo.nombre not in self.variables:
+
+            self.variables.add(
+                nodo.nombre
+            )
+
+            self.emit(
+                f"var {nodo.nombre} = {valor};"
+            )
+
+        else:
+
+            self.emit(
+                f"{nodo.nombre} = {valor};"
+            )
+
 
     # =====================================================
     # DECLARACIÓN TIPADA
     # =====================================================
-
+   
     def generate_DeclaracionTipada(self, nodo):
 
         valor = self.generate_expr(
@@ -114,9 +130,23 @@ class CSharpGenerator:
             "var"
         )
 
-        self.emit(
-            f"{tipo} {nodo.nombre} = {valor};"
-        )
+        if nodo.nombre not in self.variables:
+
+            self.variables.add(
+                nodo.nombre
+            )
+
+            self.emit(
+                f"{tipo} {nodo.nombre} = {valor};"
+            )
+
+        else:
+
+            self.emit(
+                f"{nodo.nombre} = {valor};"
+            )
+
+
 
     # =====================================================
     # ESCRIBIR
@@ -251,6 +281,50 @@ class CSharpGenerator:
         self.emit(
             f"return {valor};"
         )
+    # =====================================================
+    # DICCIONARIO
+    # =====================================================
+    
+    def generate_Diccionario(self, nodo):
+
+        pares = []
+
+        for clave, valor in nodo.pares:
+
+            clave_gen = self.generate_expr(
+                clave
+            )
+
+            valor_gen = self.generate_expr(
+                valor
+            )
+
+            pares.append(
+                f"{{ {clave_gen}, {valor_gen} }}"
+            )
+
+        return (
+            "new Dictionary<string, object> "
+            "{ "
+            + ", ".join(pares)
+            + " }"
+        )
+
+    # =====================================================
+    # ACCESO
+    # =====================================================
+
+    def generate_Acceso(self, nodo):
+
+        objeto = self.generate_expr(
+            nodo.objeto
+        )
+
+        indice = self.generate_expr(
+            nodo.indice
+        )
+
+        return f"{objeto}[{indice}]"
 
     # =====================================================
     # FUNCIONES
@@ -364,13 +438,19 @@ class CSharpGenerator:
 
             return f"new[] {{ {elementos} }}"
 
-        if tipo == "AccesoLista":
+        
+        if tipo == "Diccionario":
 
-            indice = self.generate_expr(
-                nodo.indice
+            return self.generate_Diccionario(
+                nodo
             )
 
-            return f"{nodo.nombre}[{indice}]"
+        if tipo == "Acceso":
+
+            return self.generate_Acceso(
+                nodo
+            )
+        
 
         if tipo == "BinOp":
 
@@ -390,7 +470,23 @@ class CSharpGenerator:
                 self.generate_expr(a)
                 for a in nodo.argumentos
             ])
+            if nodo.nombre == "tipo":
+                return f"{args}.GetType().Name"
+            if nodo.nombre == "agregar":
 
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                valor = self.generate_expr(
+                    nodo.argumentos[1]
+                )
+
+                return f"{lista}.Append({valor})"
+            
+            if nodo.nombre == "ordenar":
+                return f"{args}.OrderBy(x => x)"
+            
             if nodo.nombre == "largo":
                 return f"{args}.Length"
 

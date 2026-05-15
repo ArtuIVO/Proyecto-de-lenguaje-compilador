@@ -14,7 +14,17 @@ class PythonGenerator:
 
         metodo = f"generate_{type(nodo).__name__}"
 
+        
+        if not hasattr(self, metodo):
+
+            raise Exception(
+                f"Generator no soporta: "
+                f"{type(nodo).__name__}"
+            )
+
         return getattr(self, metodo)(nodo)
+        
+
 
     # =====================================================
     # HELPERS
@@ -71,7 +81,7 @@ class PythonGenerator:
 
             "booleano": "bool",
 
-            "lista": "list"
+            "lista": "list",
         }
 
         tipo = tipos_python.get(
@@ -258,6 +268,19 @@ class PythonGenerator:
         
         if tipo == "Nulo":
             return "None"
+        
+        if tipo == "Diccionario":
+
+            return self.generate_Diccionario(
+                nodo
+            )
+
+        if tipo == "Acceso":
+
+            return self.generate_Acceso(
+                nodo
+            )
+
 
 
         if tipo == "LogicalOp":
@@ -313,17 +336,6 @@ class PythonGenerator:
 
             return f"[{elementos}]"
 
-
-        if tipo == "AccesoLista":
-
-            indice = self.generate_expr(
-                nodo.indice
-            )
-
-            return f"{nodo.nombre}[{indice}]"
-        
-
-
         if tipo == "BinOp":
 
             izq = self.generate_expr(
@@ -349,6 +361,8 @@ class PythonGenerator:
                 "mayus": "str.upper",
                 "minus": "str.lower",
                 "tipo": "type",
+                "agregar": "append",
+                "ordenar": "sorted", 
             }
 
             nombre = traducciones.get(
@@ -359,3 +373,44 @@ class PythonGenerator:
             return f"{nombre}({args})"
 
         return "None"
+    
+    # ======================
+    # DICCIONARIO
+    # ======================
+   
+    def generate_Diccionario(self, nodo):
+
+        pares = []
+
+        for clave, valor in nodo.pares:
+
+            clave_gen = self.generate_expr(
+                clave
+            )
+
+            valor_gen = self.generate_expr(
+                valor
+            )
+
+            pares.append(
+                f"{clave_gen}: {valor_gen}"
+            )
+
+        return "{ " + ", ".join(pares) + " }"
+    
+    # ======================
+    # ACCESO
+    # ======================
+
+    def generate_Acceso(self, nodo):
+
+        objeto = self.generate_expr(
+            nodo.objeto
+        )
+
+        indice = self.generate_expr(
+            nodo.indice
+        )
+
+        return f"{objeto}[{indice}]"
+

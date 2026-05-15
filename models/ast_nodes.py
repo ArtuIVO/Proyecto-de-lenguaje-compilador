@@ -2,7 +2,6 @@ class Nodo:
     def __init__(self, linea=0):
         self.linea = linea
 
-
 class Programa(Nodo):
     def __init__(self, sentencias):
         super().__init__()
@@ -177,9 +176,30 @@ class Lista(Nodo):
         super().__init__(linea)
         self.elementos = elementos
 
+class Diccionario(Nodo):
 
-class AccesoLista(Nodo):
-    def __init__(self, nombre, indice, linea=0):
+    def __init__(
+        self,
+        pares,
+        linea=0
+    ):
+
         super().__init__(linea)
-        self.nombre = nombre
+
+        self.pares = pares
+
+
+
+class Acceso(Nodo):
+
+    def __init__(
+        self,
+        objeto,
+        indice,
+        linea=0
+    ):
+
+        super().__init__(linea)
+
+        self.objeto = objeto
         self.indice = indice
