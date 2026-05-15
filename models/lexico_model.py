@@ -50,6 +50,7 @@ class Lexer:
         "(", ")",
         "[", "]",
         "{", "}",
+        ".",
         ":",
         ","
     }
@@ -61,6 +62,7 @@ class Lexer:
 
         self.indent_stack = [0]
         self.inicio_linea = True
+        self.nivel_agrupacion = 0
 
     # ---------------------
 
@@ -85,7 +87,7 @@ class Lexer:
         while self.pos < len(self.texto):
 
             # ---------------- INDENTACIÓN ----------------
-            if self.inicio_linea:
+            if self.inicio_linea and self.nivel_agrupacion == 0:
 
                 espacios = 0
 
@@ -216,12 +218,28 @@ class Lexer:
             # ---------- NÚMEROS ----------
             if c.isdigit():
 
-                inicio = self.pos
+                numero = ""
 
-                while self.actual() and self.actual().isdigit(): # type: ignore
+                puntos = 0
+
+                while (
+                    self.actual()
+                    and (
+                        self.actual().isdigit() # type: ignore
+                        or self.actual() == "."
+                    )
+                ):
+
+                    if self.actual() == ".":
+
+                        puntos += 1
+
+                        if puntos > 1:
+                            break
+
+                    numero += self.actual() # type: ignore
+
                     self.avanzar()
-
-                numero = self.texto[inicio:self.pos]
 
                 tokens.append(
                     Token("NUMERO", numero, self.linea)
@@ -249,12 +267,20 @@ class Lexer:
 
             # ---------- SÍMBOLOS ----------
             if c in self.SIMBOLOS:
+
+                if c in "([{":
+                    self.nivel_agrupacion += 1
+
+                elif c in ")]}":
+                    self.nivel_agrupacion -= 1
+
                 tokens.append(
                     Token("SIMBOLO", c, self.linea)
                 )
-                self.avanzar()
-                continue
 
+                self.avanzar()
+
+                continue
             # ---------- ERROR ----------
             errores.append({
                 "linea": self.linea,
