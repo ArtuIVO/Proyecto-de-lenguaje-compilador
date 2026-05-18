@@ -88,12 +88,15 @@ class Lexer:
 
             # ---------------- INDENTACIÓN ----------------
             if self.inicio_linea and self.nivel_agrupacion == 0:
-
                 espacios = 0
 
                 while self.actual() == " ":
                     espacios += 1
                     self.avanzar()
+
+                if self.actual() in ")]}": # type: ignore
+                    self.inicio_linea = False
+                    continue
 
                 # línea vacía
                 if self.actual() == "\n":
