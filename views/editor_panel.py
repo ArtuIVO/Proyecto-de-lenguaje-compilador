@@ -47,6 +47,8 @@ class SyntaxHighlighter(QSyntaxHighlighter):
             "romper",
             "continuar",
             "nulo",
+            "agregar",
+            "ordenar",
             
         ]
 
@@ -103,7 +105,7 @@ class SyntaxHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text):
 
-        self.setFormat(0, len(text), QTextCharFormat())  # 🔥 reset
+        self.setFormat(0, len(text), QTextCharFormat())  # type: ignore # 🔥 reset
 
         for patron, formato in self.rules:
             it = patron.globalMatch(text)

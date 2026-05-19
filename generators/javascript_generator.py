@@ -261,14 +261,9 @@ class JavaScriptGenerator:
 
     def generate_Llamada(self, nodo):
 
-        args = ", ".join([
-            self.generate_expr(a)
-            for a in nodo.argumentos
-        ])
+        llamada = self.generate_expr(nodo)
 
-        self.emit(
-            f"{nodo.nombre}({args});"
-        )
+        self.emit(f"{llamada};")
     # =====================================================
     # DICCIONARIO
     # =====================================================
@@ -359,6 +354,12 @@ class JavaScriptGenerator:
 
             if nodo.op == "no":
 
+                if "=== 0" in valor:
+                    return valor.replace(
+                        "=== 0",
+                        "!== 0"
+                    )
+
                 return f"!{valor}"
 
             return f"{nodo.op}{valor}"
@@ -407,37 +408,102 @@ class JavaScriptGenerator:
             return f"{izq} {nodo.op} {der}"
 
         if tipo == "Llamada":
-             args = ", ".join([
-            self.generate_expr(a)
-            for a in nodo.argumentos
-        ])
+            args = ", ".join([
+                self.generate_expr(a)
+                for a in nodo.argumentos
+            ])
+            # =====================================================
+            # BUILTINS CORE
+            # =====================================================
+            if nodo.nombre == "tipo":
+                return f"typeof({args})"
 
-        if nodo.nombre == "tipo":
-            return f"typeof({args})"
+            if nodo.nombre == "agregar":
 
-        if nodo.nombre == "agregar":
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
 
-            lista = self.generate_expr(
-                nodo.argumentos[0]
-            )
+                valor = self.generate_expr(
+                    nodo.argumentos[1]
+                )
 
-            valor = self.generate_expr(
-                nodo.argumentos[1]
-            )
+                return f"{lista}.push({valor})"
 
-            return f"{lista}.push({valor})"
+            if nodo.nombre == "ordenar":
+                return f"{args}.sort()"
 
-        if nodo.nombre == "largo":
-            return f"{args}.length"
+            if nodo.nombre == "eliminar":
 
-        if nodo.nombre == "mayus":
-            return f"{args}.toUpperCase()"
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
 
-        if nodo.nombre == "minus":
-            return f"{args}.toLowerCase()"
+                valor = self.generate_expr(
+                    nodo.argumentos[1]
+                )
 
-        if nodo.nombre == "ordenar":
-            return f"{args}.sort()"
+                return (
+                    f"{lista}.splice("
+                    f"{lista}.indexOf({valor}), 1)"
+                )
 
-        return f"{nodo.nombre}({args})"
+            if nodo.nombre == "insertar":
 
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                indice = self.generate_expr(
+                    nodo.argumentos[1]
+                )
+
+                valor = self.generate_expr(
+                    nodo.argumentos[2]
+                )
+
+                return (
+                    f"{lista}.splice("
+                    f"{indice}, 0, {valor})"
+                )
+
+            if nodo.nombre == "contiene":
+
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                valor = self.generate_expr(
+                    nodo.argumentos[1]
+                )
+
+                return f"{lista}.includes({valor})"
+
+            if nodo.nombre == "vacio":
+                return f"{args}.length === 0"
+
+            if nodo.nombre == "limpiar":
+                return f"{args}.length = 0"
+
+            if nodo.nombre == "largo":
+                return f"{args}.length"
+
+            if nodo.nombre == "mayus":
+                return f"{args}.toUpperCase()"
+
+            if nodo.nombre == "minus":
+                return f"{args}.toLowerCase()"
+
+            if nodo.nombre == "convertir_texto":
+                return f"String({args})"
+
+            if nodo.nombre == "convertir_entero":
+                return f"parseInt({args})"
+
+            if nodo.nombre == "convertir_decimal":
+                return f"parseFloat({args})"
+
+            if nodo.nombre == "convertir_booleano":
+                return f"Boolean({args})"
+
+            return f"{nodo.nombre}({args})"

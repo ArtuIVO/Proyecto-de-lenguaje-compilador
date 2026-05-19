@@ -213,19 +213,9 @@ class PythonGenerator:
 
     def generate_Llamada(self, nodo):
 
-        args = ", ".join([
-            self.generate_expr(a)
-            for a in nodo.argumentos
-        ])
+        llamada = self.generate_expr(nodo)
 
-        # builtins
-        if nodo.nombre == "escribir":
-            self.emit(f"print({args})")
-            return
-
-        self.emit(
-            f"{nodo.nombre}({args})"
-        )
+        self.emit(f"{llamada}")
 
     # =====================================================
     # FOR
@@ -347,6 +337,27 @@ class PythonGenerator:
             )
 
             return f"{izq} {nodo.op} {der}"
+        
+        if nodo.nombre == "agregar":
+
+            lista = self.generate_expr(
+                nodo.argumentos[0]
+            )
+
+            valor = self.generate_expr(
+                nodo.argumentos[1]
+            )
+
+            return f"{lista}.append({valor})"
+
+
+        if nodo.nombre == "ordenar":
+
+            lista = self.generate_expr(
+                nodo.argumentos[0]
+            )
+
+            return f"{lista}.sort()"
 
         if tipo == "Llamada":
 
@@ -355,23 +366,104 @@ class PythonGenerator:
                 for a in nodo.argumentos
             ])
 
-            # traducción builtins
-            traducciones = {
-                "largo": "len",
-                "mayus": "str.upper",
-                "minus": "str.lower",
-                "tipo": "type",
-                "agregar": "append",
-                "ordenar": "sorted", 
-            }
+            # =====================================================
+            # BUILTINS CORE
+            # =====================================================
 
-            nombre = traducciones.get(
-                nodo.nombre,
-                nodo.nombre
-            )
+            if nodo.nombre == "tipo":
+                return f"type({args}).__name__"
 
-            return f"{nombre}({args})"
+            if nodo.nombre == "agregar":
 
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                valor = self.generate_expr(
+                    nodo.argumentos[1]
+                )
+
+                return f"{lista}.append({valor})"
+
+            if nodo.nombre == "ordenar":
+
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                return f"{lista}.sort()"
+
+            if nodo.nombre == "eliminar":
+
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                valor = self.generate_expr(
+                    nodo.argumentos[1]
+                )
+
+                return f"{lista}.remove({valor})"
+
+            if nodo.nombre == "insertar":
+
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                indice = self.generate_expr(
+                    nodo.argumentos[1]
+                )
+
+                valor = self.generate_expr(
+                    nodo.argumentos[2]
+                )
+
+                return (
+                    f"{lista}.insert("
+                    f"{indice}, {valor})"
+                )
+
+            if nodo.nombre == "contiene":
+
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                valor = self.generate_expr(
+                    nodo.argumentos[1]
+                )
+
+                return f"{valor} in {lista}"
+
+            if nodo.nombre == "vacio":
+                return f"len({args}) == 0"
+
+            if nodo.nombre == "limpiar":
+                return f"{args}.clear()"
+
+            if nodo.nombre == "largo":
+                return f"len({args})"
+
+            if nodo.nombre == "mayus":
+                return f"str.upper({args})"
+
+            if nodo.nombre == "minus":
+                return f"str.lower({args})"
+
+            if nodo.nombre == "convertir_texto":
+                return f"str({args})"
+
+            if nodo.nombre == "convertir_entero":
+                return f"int({args})"
+
+            if nodo.nombre == "convertir_decimal":
+                return f"float({args})"
+
+            if nodo.nombre == "convertir_booleano":
+                return f"bool({args})"
+
+            return f"{nodo.nombre}({args})"
         return "None"
     
     # ======================

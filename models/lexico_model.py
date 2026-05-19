@@ -12,6 +12,7 @@ class Token:
 class Lexer:
 
     PALABRAS = {
+
         "si",
         "sino",
         "mientras",
@@ -23,20 +24,24 @@ class Lexer:
         "para",
         "en",
         "rango",
-        "entero", 
-        "decimal", 
-        "texto", 
-        "booleano", 
+
+        "entero",
+        "decimal",
+        "texto",
+        "booleano",
         "lista",
+
         "verdadero",
         "falso",
+
         "y",
         "o",
         "no",
+
         "romper",
         "continuar",
+
         "nulo",
-        
     }
 
     OPERADORES = {
@@ -140,12 +145,24 @@ class Lexer:
 
             # salto línea
             if c == "\n":
-                tokens.append(Token("NEWLINE", "\\n", self.linea))
-                self.linea += 1
-                self.avanzar()
-                self.inicio_linea = True
-                continue
 
+                self.linea += 1
+
+                self.avanzar()
+
+                # 🔥 ignorar newline dentro agrupaciones
+                if self.nivel_agrupacion > 0:
+
+                    self.inicio_linea = True
+                    continue
+
+                tokens.append(
+                    Token("NEWLINE", "\\n", self.linea)
+                )
+
+                self.inicio_linea = True
+
+                continue
             # espacios internos
             if c.isspace():
                 self.avanzar()

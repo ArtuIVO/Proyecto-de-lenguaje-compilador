@@ -1,5 +1,6 @@
 from models.error import CompilerError
 from models.builtins import Builtins
+import copy
 
 TIPOS_EDULANG = {
 
@@ -91,6 +92,7 @@ class AnalizadorSemantico:
         for scope in reversed(self.scopes):
             if nodo.nombre in scope:
                 valor = scope[nodo.nombre].valor
+                
 
                 self.traza.append({
                     "linea": nodo.linea,
@@ -195,7 +197,11 @@ class AnalizadorSemantico:
             "valido": True
         })
 
-        self.salida.append(valor)
+        
+
+        self.salida.append(
+            copy.deepcopy(valor)
+        )
 
     # ----------------------
 

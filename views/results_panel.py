@@ -166,8 +166,23 @@ class ResultsPanel(QWidget):
         
     def _crear_item_visual(self, nodo):
 
-        from models.ast_nodes import Programa, Asignacion, If, While, Para, Funcion, Retornar, Escribir, BinOp, Lista, AccesoLista, Numero, Cadena, Identificador
-
+        from models.ast_nodes import (
+                    Programa,
+                    Asignacion,
+                    If,
+                    While,
+                    Para,
+                    Funcion,
+                    Retornar,
+                    Escribir,
+                    BinOp,
+                    Lista,
+                    Diccionario,
+                    Acceso,
+                    Numero,
+                    Cadena,
+                    Identificador
+                )
         # PROGRAMA
         if isinstance(nodo, Programa):
             item = QTreeWidgetItem(["Programa"])
@@ -281,11 +296,46 @@ class ResultsPanel(QWidget):
             for e in nodo.elementos:
                 item.addChild(self._crear_item_visual(e))
             return item
+        
+        # DICCIONARIO
+        if isinstance(nodo, Diccionario):
 
-        # ACCESO LISTA
-        if isinstance(nodo, AccesoLista):
-            item = QTreeWidgetItem([f"Acceso {nodo.nombre}"])
-            item.addChild(self._crear_item_visual(nodo.indice))
+            item = QTreeWidgetItem(["Diccionario"])
+
+            for clave, valor in nodo.pares:
+
+                par = QTreeWidgetItem(["Par"])
+
+                par.addChild(
+                    self._crear_item_visual(clave)
+                )
+
+                par.addChild(
+                    self._crear_item_visual(valor)
+                )
+
+                item.addChild(par)
+
+            return item
+
+        # ACCESO UNIVERSAL
+        if isinstance(nodo, Acceso):
+
+            item = QTreeWidgetItem(["Acceso"])
+
+            objeto = QTreeWidgetItem(["Objeto"])
+            objeto.addChild(
+                self._crear_item_visual(nodo.objeto)
+            )
+
+            indice = QTreeWidgetItem(["Índice"])
+            indice.addChild(
+                self._crear_item_visual(nodo.indice)
+            )
+
+            item.addChild(objeto)
+            item.addChild(indice)
+
             return item
 
         # TERMINALES
@@ -366,7 +416,7 @@ class ResultsPanel(QWidget):
 
                     # si es nodo
                     if hasattr(elem, "__dict__"):
-                        hijo = self._crear_item(elem)
+                        hijo = self._crear_item(elem) # type: ignore
                         rama.addChild(hijo)
                         self._cargar_hijos(hijo, elem)
 
@@ -382,7 +432,7 @@ class ResultsPanel(QWidget):
                 rama = QTreeWidgetItem([clave])
                 padre.addChild(rama)
 
-                hijo = self._crear_item(valor)
+                hijo = self._crear_item(valor) # type: ignore
                 rama.addChild(hijo)
 
                 self._cargar_hijos(hijo, valor)

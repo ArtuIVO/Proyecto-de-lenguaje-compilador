@@ -358,15 +358,9 @@ class CSharpGenerator:
 
     def generate_Llamada(self, nodo):
 
-        args = ", ".join([
-            self.generate_expr(a)
-            for a in nodo.argumentos
-        ])
+        llamada = self.generate_expr(nodo)
 
-        self.emit(
-            f"{nodo.nombre}({args});"
-        )
-
+        self.emit(f"{llamada};")
     # =====================================================
     # EXPRESIONES
     # =====================================================
@@ -415,12 +409,21 @@ class CSharpGenerator:
                 nodo.valor
             )
 
+            valor_tipo = type(nodo.valor).__name__
+
             if nodo.op == "no":
+
+                if valor_tipo == "Identificador":
+                    return f"{valor} == null"
+                if "== 0" in valor:
+                    return valor.replace(
+                        "== 0",
+                        "!= 0"
+                    )
 
                 return f"!{valor}"
 
             return f"{nodo.op}{valor}"
-
 
 
         if tipo == "Cadena":
@@ -436,7 +439,12 @@ class CSharpGenerator:
                 for x in nodo.elementos
             ])
 
-            return f"new[] {{ {elementos} }}"
+            return (
+                "new List<object> "
+                "{ "
+                + elementos
+                + " }"
+            )
 
         
         if tipo == "Diccionario":
@@ -470,8 +478,14 @@ class CSharpGenerator:
                 self.generate_expr(a)
                 for a in nodo.argumentos
             ])
+
+            # =====================================================
+            # BUILTINS CORE
+            # =====================================================
+
             if nodo.nombre == "tipo":
                 return f"{args}.GetType().Name"
+
             if nodo.nombre == "agregar":
 
                 lista = self.generate_expr(
@@ -482,13 +496,62 @@ class CSharpGenerator:
                     nodo.argumentos[1]
                 )
 
-                return f"{lista}.Append({valor})"
-            
+                return f"{lista}.Add({valor})"
+
             if nodo.nombre == "ordenar":
-                return f"{args}.OrderBy(x => x)"
-            
+                return f"{args}.Sort()"
+
+            if nodo.nombre == "eliminar":
+
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                valor = self.generate_expr(
+                    nodo.argumentos[1]
+                )
+
+                return f"{lista}.Remove({valor})"
+
+            if nodo.nombre == "insertar":
+
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                indice = self.generate_expr(
+                    nodo.argumentos[1]
+                )
+
+                valor = self.generate_expr(
+                    nodo.argumentos[2]
+                )
+
+                return (
+                    f"{lista}.Insert("
+                    f"{indice}, {valor})"
+                )
+
+            if nodo.nombre == "contiene":
+
+                lista = self.generate_expr(
+                    nodo.argumentos[0]
+                )
+
+                valor = self.generate_expr(
+                    nodo.argumentos[1]
+                )
+
+                return f"{lista}.Contains({valor})"
+
+            if nodo.nombre == "vacio":
+                return f"{args}.Count == 0"
+
+            if nodo.nombre == "limpiar":
+                return f"{args}.Clear()"
+
             if nodo.nombre == "largo":
-                return f"{args}.Length"
+                return f"{args}.Count"
 
             if nodo.nombre == "mayus":
                 return f"{args}.ToUpper()"
@@ -496,6 +559,17 @@ class CSharpGenerator:
             if nodo.nombre == "minus":
                 return f"{args}.ToLower()"
 
-            return f"{nodo.nombre}({args})"
+            if nodo.nombre == "convertir_texto":
+                return f"{args}.ToString()"
 
+            if nodo.nombre == "convertir_entero":
+                return f"Convert.ToInt32({args})"
+
+            if nodo.nombre == "convertir_decimal":
+                return f"Convert.ToDouble({args})"
+
+            if nodo.nombre == "convertir_booleano":
+                return f"Convert.ToBoolean({args})"
+
+            return f"{nodo.nombre}({args})"
         return "null"
